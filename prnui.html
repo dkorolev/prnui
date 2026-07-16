@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  :root {
+    --bg:        #0d1117;
+    --surface:   #161b22;
+    --border:    #2a3140;
+    --text:      #e6edf3;
+    --text-muted:#7d8590;
+    --cyan:      #58a6ff;
+    --orange:    #d29922;
+    --green:     #3fb950;
+    --yellow:    #d4a72c;
+    --red:       #f85149;
+    --magenta:   #bc4dff;
+    --purple:    #8957e5;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  body {
+    font-family: 'Ubuntu', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px 32px;
+    max-width: 960px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .mono { font-family: var(--font-mono); }
+
+  /* ── typography ── */
+  h1 { font-size: 1.75rem; font-weight: 600; margin-bottom: 4px; }
+
+  .subtitle {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+  }
+
+  .section-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .demo-note {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 14px;
+  }
+
+  /* ── chamfered shape (octagon via clip-path) ── */
+  .chamfer {
+    --cut: 5px;
+    --bw: 2px;
+    position: relative;
+    clip-path: polygon(
+      var(--cut) 0%, calc(100% - var(--cut)) 0%,
+      100% var(--cut), 100% calc(100% - var(--cut)),
+      calc(100% - var(--cut)) 100%, var(--cut) 100%,
+      0% calc(100% - var(--cut)), 0% var(--cut)
+    );
+  }
+
+  .chamfer::before {
+    content: '';
+    position: absolute;
+    inset: var(--bw);
+    --inner: calc(var(--cut) - var(--bw) * 0.5858);
+    clip-path: polygon(
+      var(--inner) 0%, calc(100% - var(--inner)) 0%,
+      100% var(--inner), 100% calc(100% - var(--inner)),
+      calc(100% - var(--inner)) 100%, var(--inner) 100%,
+      0% calc(100% - var(--inner)), 0% var(--inner)
+    );
+    z-index: 0;
+  }
+
+  /* the ::before surface paints above in-flow text; lift all children over it */
+  .chamfer > * { position: relative; z-index: 1; }
+
+  /* ── card ── */
+  .card {
+    --cut: 14px;
+    --bw: 1px;
+    --accent-w: 3px;
+    background: var(--border);
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+  .card::before { background: var(--surface); }
+
+  /* accent edge: the outer layer paints an accent stripe wide enough to wrap
+     the chamfered corners, and the surface is inset further on that side */
+  .card--accent-left {
+    background: linear-gradient(90deg,
+      var(--accent) 0 calc(var(--cut) + var(--accent-w)),
+      var(--border) 0);
+  }
+  .card--accent-left::before {
+    inset: var(--bw) var(--bw) var(--bw) var(--accent-w);
+  }
+  .card--accent-top {
+    background: linear-gradient(180deg,
+      var(--accent) 0 calc(var(--cut) + var(--accent-w)),
+      var(--border) 0);
+  }
+  .card--accent-top::before {
+    inset: var(--accent-w) var(--bw) var(--bw) var(--bw);
+  }
+
+  .accent-cyan    { --accent: var(--cyan); }
+  .accent-green   { --accent: var(--green); }
+  .accent-orange  { --accent: var(--orange); }
+  .accent-yellow  { --accent: var(--yellow); }
+  .accent-red     { --accent: var(--red); }
+  .accent-magenta { --accent: var(--magenta); }
+  .accent-purple  { --accent: var(--purple); }
+
+  /* ── buttons ── */
+  .btn-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn-row:last-child { margin-bottom: 0; }
+
+  .btn {
+    --cut: 5px;
+    --bw: 2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 110px;
+    padding: 9px 28px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    color: var(--text);
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .btn::before {
+    transition: background 0.2s;
+  }
+
+  .btn:not(.btn--disabled):hover::before {
+    background: var(--btn-fill) !important;
+  }
+  .btn:not(.btn--disabled):active {
+    transform: scale(0.97);
+  }
+  .btn:not(.btn--disabled):active::before {
+    filter: brightness(0.85);
+  }
+  .btn:focus-visible { filter: brightness(1.3); outline: none; }
+
+  .btn--cyan {
+    --btn-fill: rgba(88,166,255,0.18);
+    background: var(--cyan);
+  }
+  .btn--cyan::before { background: var(--surface); }
+
+  .btn--orange {
+    --btn-fill: rgba(210,153,34,0.18);
+    background: var(--orange);
+  }
+  .btn--orange::before { background: var(--surface); }
+
+  .btn--purple {
+    --btn-fill: rgba(137,87,229,0.22);
+    background: var(--purple);
+  }
+  .btn--purple::before { background: var(--surface); }
+
+  .btn--red {
+    --btn-fill: rgba(248,81,73,0.18);
+    background: var(--red);
+  }
+  .btn--red::before { background: var(--surface); }
+
+  .btn--muted {
+    --btn-fill: rgba(255,255,255,0.06);
+    background: var(--border);
+    color: var(--text-muted);
+  }
+  .btn--muted::before { background: var(--surface); }
+  .btn--muted:not(.btn--disabled):hover { color: var(--text); }
+
+  .btn--disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+  .btn--disabled::before {
+    background: var(--surface);
+  }
+
+  /* ── segmented control ── */
+  .seg {
+    --cut: 6px;
+    --bw: 1.5px;
+    --seg-inner: calc(var(--cut) - var(--bw) * 0.5858);
+    display: inline-flex;
+    background: var(--border);
+    padding: var(--bw);
+    gap: var(--bw);
+  }
+  .seg-opt {
+    border: none;
+    background: var(--surface);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.85rem;
+    padding: 8px 22px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .seg-opt:hover { color: var(--text); }
+  .seg-opt:focus-visible { filter: brightness(1.3); outline: none; }
+  .seg-opt.active {
+    background: var(--purple);
+    color: #fff;
+    font-weight: 500;
+  }
+  /* first/last options carry their own inner chamfer so the ring
+     stays visible along the group's corner diagonals */
+  .seg-opt:first-child {
+    clip-path: polygon(
+      var(--seg-inner) 0%, 100% 0%, 100% 100%, var(--seg-inner) 100%,
+      0% calc(100% - var(--seg-inner)), 0% var(--seg-inner)
+    );
+  }
+  .seg-opt:last-child {
+    clip-path: polygon(
+      0% 0%, calc(100% - var(--seg-inner)) 0%, 100% var(--seg-inner),
+      100% calc(100% - var(--seg-inner)), calc(100% - var(--seg-inner)) 100%, 0% 100%
+    );
+  }
+
+  /* ── form ── */
+  .form-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; }
+
+  .input-wrap {
+    --cut: 8px;
+    --bw: 1.5px;
+    background: var(--border);
+  }
+  .input-wrap::before {
+    background: rgba(255,255,255,0.06);
+    transition: background 0.2s;
+  }
+  .input-wrap:focus-within {
+    background: var(--purple);
+  }
+  .input-wrap:focus-within::before {
+    background: rgba(137,87,229,0.4);
+  }
+
+  .input {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    outline: none;
+  }
+  .input::placeholder { color: var(--text-muted); }
+
+  /* ── status badges & glyphs ── */
+  .badge-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .badge {
+    --cut: 3px;
+    --bw: 1.5px;
+    display: inline-block;
+    padding: 3px 14px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .badge--cyan   { background: var(--cyan);   color: var(--cyan); }
+  .badge--cyan::before   { background: var(--surface); }
+  .badge--green  { background: var(--green);  color: var(--green); }
+  .badge--green::before  { background: var(--surface); }
+  .badge--yellow { background: var(--yellow); color: var(--yellow); }
+  .badge--yellow::before { background: var(--surface); }
+  .badge--red    { background: var(--red);    color: var(--red); }
+  .badge--red::before    { background: var(--surface); }
+  .badge--purple { background: var(--purple); color: var(--purple); }
+  .badge--purple::before { background: var(--surface); }
+
+  /* skeleton state while real status is being fetched */
+  .badge--checking {
+    background: var(--border);
+    color: var(--text-muted);
+    text-transform: none;
+    letter-spacing: normal;
+    font-weight: 500;
+  }
+  .badge--checking::before { background: var(--surface); }
+
+  .glyph-row {
+    display: flex;
+    gap: 26px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  .glyph-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .glyph { font-weight: 700; font-size: 1rem; }
+  .glyph--waiting  { color: var(--cyan); }
+  .glyph--running  { color: var(--orange); }
+  .glyph--done     { color: var(--green); }
+  .glyph--graceful { color: var(--yellow); }
+  .glyph--failed   { color: var(--red); }
+  .glyph--skipped  { color: var(--text-muted); }
+
+  /* ── harness chips ── */
+  .hchip-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .hchip {
+    --cut: 3px;
+    --bw: 0px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--bg);
+    cursor: default;
+    transition: transform 0.12s;
+  }
+  .hchip:hover { transform: scale(1.25); }
+
+  .hchip--opencode { background: var(--cyan); }
+  .hchip--claude   { background: #d97757; }
+  .hchip--codex    { background: var(--green); }
+  .hchip--grok     { background: var(--yellow); }
+  .hchip--cursor   { background: #a371f7; }
+  .hchip--done     { opacity: 0.35; }
+  .hchip--overflow { background: var(--border); color: var(--text-muted); }
+
+  /* ── chrome: status bar / breadcrumbs / tabs ── */
+  .statusbar {
+    --cut: 8px;
+    --bw: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--border);
+    padding: 10px 18px;
+    font-size: 0.85rem;
+  }
+  .statusbar::before { background: var(--bg); }
+
+  .crumbs {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .crumbs a { color: inherit; text-decoration: none; }
+  .crumbs a:hover { color: var(--cyan); }
+  .crumb-sep { color: var(--text-muted); font-weight: 400; margin: 0 7px; }
+
+  .statusbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* connection dot: a 45°-rotated square, on language */
+  .dot {
+    width: 8px;
+    height: 8px;
+    display: inline-block;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+  .dot--live { background: var(--green); }
+  .dot--connecting {
+    background: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(88,166,255,0.25);
+    animation: dot-pulse 1.2s ease-in-out infinite;
+  }
+  .dot--down { background: var(--red); }
+  @keyframes dot-pulse {
+    50% { box-shadow: 0 0 0 6px rgba(88,166,255,0.1); }
+  }
+
+  .dot-legend {
+    display: flex;
+    gap: 26px;
+    align-items: center;
+    margin-top: 16px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+  .dot-legend span { display: inline-flex; align-items: center; gap: 8px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-top: 16px;
+  }
+  .tab {
+    position: relative;
+    padding: 9px 16px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .tab:hover { color: var(--text); }
+  .tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+  .tab.active { color: var(--cyan); font-weight: 700; }
+  /* trapezoid underline: 45° ends instead of a plain bar */
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 3px;
+    background: var(--cyan);
+    clip-path: polygon(3px 0%, calc(100% - 3px) 0%, 100% 100%, 0% 100%);
+  }
+  .tab-panel-demo {
+    padding: 14px 4px 2px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  /* ── table ── */
+  .table-scroll { overflow-x: auto; }
+
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .table th {
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+  .job-id { font-family: var(--font-mono); color: var(--cyan); }
+
+  /* RTL ellipsis keeps the tail of long paths visible */
+  .repo-path {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    display: block;
+    max-width: 220px;
+    direction: rtl;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── collapsible status rows ── */
+  .proc {
+    --cut: 8px;
+    --bw: 1px;
+    --accent-w: 3px;
+    background: linear-gradient(90deg,
+      var(--accent) 0 calc(var(--cut) + var(--accent-w)),
+      var(--border) 0);
+    margin-bottom: 10px;
+  }
+  .proc::before {
+    background: var(--surface);
+    inset: var(--bw) var(--bw) var(--bw) var(--accent-w);
+  }
+  .proc:last-child { margin-bottom: 0; }
+
+  .proc--ok      { --accent: var(--green); }
+  .proc--running { --accent: var(--orange); }
+  .proc--fail    { --accent: var(--red); }
+  .proc--waiting { --accent: var(--cyan); }
+
+  .proc summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    list-style: none;
+    font-size: 0.9rem;
+  }
+  .proc summary::-webkit-details-marker { display: none; }
+  .proc summary:focus-visible { filter: brightness(1.3); outline: none; }
+
+  .proc-caret {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    transition: transform 0.15s;
+  }
+  .proc[open] .proc-caret { transform: rotate(90deg); }
+
+  .proc-glyph { font-weight: 700; }
+  .proc--ok      .proc-glyph { color: var(--green); }
+  .proc--running .proc-glyph { color: var(--orange); }
+  .proc--fail    .proc-glyph { color: var(--red); }
+  .proc--waiting .proc-glyph { color: var(--cyan); }
+
+  .proc-name { font-weight: 600; }
+  .proc-meta {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .proc-body {
+    padding: 0 16px 14px 36px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  .proc-body .mono { font-size: 0.8rem; }
+
+  /* ── workflow nodes ── */
+  .wf-row { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .wf-node {
+    --cut: 7px;
+    --bw: 1px;
+    --accent-w: 3px;
+    width: 200px;
+    min-height: 72px;
+    padding: 11px 12px 10px 15px;
+    background: linear-gradient(90deg,
+      var(--accent) 0 calc(var(--cut) + var(--accent-w)),
+      var(--node-border, var(--border)) 0);
+  }
+  .wf-node::before {
+    background: var(--bg);
+    inset: var(--bw) var(--bw) var(--bw) var(--accent-w);
+  }
+  .wf-node--sm { width: 170px; min-height: 60px; }
+
+  .wf-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .wf-ico { font-weight: 700; }
+  .wf-meta {
+    margin-top: 6px;
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+  }
+
+  .wf-node--waiting { --accent: var(--border); }
+  .wf-node--waiting .wf-ico { color: var(--cyan); }
+  .wf-node--running {
+    --accent: var(--orange);
+    --node-border: rgba(210,153,34,0.55);
+    animation: wf-pulse 2s ease-in-out infinite;
+  }
+  .wf-node--running .wf-ico { color: var(--orange); }
+  .wf-node--done { --accent: var(--green); }
+  .wf-node--done .wf-ico { color: var(--green); }
+  .wf-node--failed { --accent: var(--red); }
+  .wf-node--failed .wf-ico { color: var(--red); }
+  .wf-node--skipped { --accent: var(--border); opacity: 0.55; }
+  .wf-node--skipped .wf-ico { color: var(--text-muted); }
+
+  @keyframes wf-pulse {
+    50% { filter: brightness(1.45); }
+  }
+
+  .wf-outcome-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 18px;
+  }
+  .wf-outcome {
+    --cut: 4px;
+    --bw: 1.5px;
+    display: inline-block;
+    padding: 4px 16px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .wf-outcome--ok { background: var(--green); color: var(--green); }
+  .wf-outcome--ok::before { background: color-mix(in srgb, var(--green) 12%, var(--surface)); }
+  .wf-outcome--running { background: var(--orange); color: var(--orange); }
+  .wf-outcome--running::before { background: color-mix(in srgb, var(--orange) 12%, var(--surface)); }
+  .wf-outcome--fail { background: var(--red); color: var(--red); }
+  .wf-outcome--fail::before { background: color-mix(in srgb, var(--red) 12%, var(--surface)); }
+
+  .wf-gate {
+    --cut: 2px;
+    --bw: 1px;
+    display: inline-block;
+    padding: 2px 9px;
+    font-size: 0.68rem;
+    font-family: var(--font-mono);
+    background: var(--purple);
+    color: var(--purple);
+  }
+  .wf-gate::before { background: var(--surface); }
+
+  /* loop island: dashed ring via 45° stripes on the outer layer */
+  .wf-loop {
+    --cut: 12px;
+    --bw: 1.5px;
+    padding: 16px;
+    margin-top: 18px;
+    background: repeating-linear-gradient(45deg,
+      rgba(137,87,229,0.65) 0 5px, transparent 5px 9px);
+  }
+  .wf-loop::before { background: color-mix(in srgb, var(--purple) 4%, var(--surface)); }
+
+  .wf-loop-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--purple);
+    margin-bottom: 12px;
+  }
+  .wf-loop-progress {
+    --cut: 3px;
+    --bw: 1px;
+    display: inline-block;
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    color: var(--cyan);
+    background: repeating-linear-gradient(45deg,
+      var(--cyan) 0 4px, transparent 4px 7px);
+  }
+  .wf-loop-progress::before { background: var(--surface); }
+
+  /* ── workflow diagram ── */
+  .wf-diagram-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .wf-summary { font-size: 0.85rem; color: var(--text-muted); }
+  .wf-jump {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 0.15em;
+  }
+  .wf-jump:hover { color: var(--cyan); text-decoration-color: var(--cyan); }
+
+  .wf-zoom { margin-left: auto; display: inline-flex; gap: 6px; }
+  .wf-zbtn {
+    --cut: 4px;
+    --bw: 1px;
+    min-width: 34px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+  }
+  .wf-zbtn::before { background: var(--surface); }
+  .wf-zbtn:hover { color: var(--text); }
+  .wf-zbtn:focus-visible { filter: brightness(1.3); outline: none; }
+
+  .workflow-visual { position: relative; }
+
+  /* floating legend, top-right over the graph */
+  .workflow-legend {
+    --cut: 5px;
+    --bw: 1px;
+    position: absolute;
+    z-index: 4;
+    top: 10px;
+    right: 10px;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    background: var(--border);
+  }
+  .workflow-legend::before { background: var(--surface); }
+  .workflow-legend .glyph { font-size: 0.85rem; margin-right: 3px; }
+
+  /* scrollable stage; gradient edge-fades cue horizontal overflow, scrollbars hidden */
+  .workflow-scroll {
+    --cut: 8px;
+    --bw: 0px;
+    overflow: auto;
+    max-width: 100%;
+    padding: 10px;
+    display: flex;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    background:
+      linear-gradient(90deg, var(--bg) 30%, transparent) left center / 20px 100% no-repeat,
+      linear-gradient(270deg, var(--bg) 30%, transparent) right center / 20px 100% no-repeat,
+      radial-gradient(farthest-side at 0 50%, rgba(0,0,0,0.35), transparent) left center / 12px 100% no-repeat,
+      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.35), transparent) right center / 12px 100% no-repeat,
+      var(--bg);
+    background-attachment: local, local, scroll, scroll, local;
+  }
+  .workflow-scroll::-webkit-scrollbar { display: none; }
+  .workflow-scroll:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  .workflow-stage { position: relative; flex: 0 0 auto; margin: auto; }
+
+  .workflow-edges {
+    position: absolute;
+    inset: 0;
+    color: #8b949e;
+    pointer-events: none;
+  }
+  .wf-edge {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    opacity: 0.92;
+  }
+  .wf-arrowhead { stroke: currentColor; }
+
+  .workflow-stage .wf-node,
+  .workflow-stage .wf-bookend {
+    position: absolute;
+    margin: 0;
+  }
+  .workflow-stage .wf-node {
+    width: 180px;
+    height: 72px;
+    min-height: 0;
+  }
+
+  /* image-build node variant: cyan accent, monospace id */
+  .wf-node--build { --accent: var(--cyan); }
+  .wf-node--build .wf-ico { color: var(--cyan); }
+  .wf-node--build .wf-head { font-family: var(--font-mono); font-size: 0.8rem; }
+
+  .wf-flash { animation: wf-flash 1s ease; }
+  @keyframes wf-flash { 30% { filter: brightness(1.9); } }
+
+  /* start / finish bookends: play triangle and checkered flag */
+  .wf-bookend {
+    --cut: 6px;
+    --bw: 1px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--border);
+    user-select: none;
+  }
+  .wf-bookend::before { background: var(--bg); }
+
+  .wf-start-play {
+    display: block;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 8px 0 8px 13px;
+    border-color: transparent transparent transparent #fff;
+    margin-left: 3px;
+  }
+  .wf-finish-flag {
+    display: block;
+    width: 18px;
+    height: 14px;
+    margin-left: 3px;
+    border: 1px solid var(--text-muted);
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(45deg, var(--text-muted) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--text-muted) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--text-muted) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--text-muted) 75%);
+    background-size: 6px 6px;
+    background-position: 0 0, 0 3px, 3px -3px, 3px 0;
+  }
+  .wf-finish-flag::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: -1px;
+    bottom: -6px;
+    width: 2px;
+    background: var(--text-muted);
+  }
+
+  /* ── banners ── */
+  .banner {
+    --cut: 8px;
+    --bw: 1px;
+    padding: 13px 18px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+  }
+  .banner:last-child { margin-bottom: 0; }
+
+  .banner--danger { background: var(--red); }
+  .banner--danger::before { background: color-mix(in srgb, var(--red) 8%, var(--bg)); }
+  .banner--danger .banner-title { color: var(--red); }
+
+  .banner--info { background: var(--cyan); }
+  .banner--info::before { background: color-mix(in srgb, var(--cyan) 8%, var(--bg)); }
+  .banner--info a { color: var(--cyan); }
+
+  .banner-title { font-weight: 700; margin-bottom: 2px; }
+  .banner ul { margin: 4px 0 0 18px; color: var(--text-muted); }
+
+  /* ── log output ── */
+  .output {
+    --cut: 8px;
+    --bw: 1px;
+    background: var(--border);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    line-height: 1.65;
+  }
+  .output::before { background: #0a0e14; }
+  .output-scroll {
+    max-height: 16rem;
+    overflow-y: auto;
+    padding: 14px 18px;
+  }
+  .line { white-space: pre-wrap; }
+  .line .at {
+    color: var(--text-muted);
+    margin-right: 12px;
+    user-select: none;
+  }
+  .line--ok   { color: var(--green); }
+  .line--warn { color: var(--yellow); }
+  .line--err  { color: var(--red); }
+
+  /* ── dialog & toast ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(1,4,9,0.72);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+  }
+  .overlay.open { display: flex; }
+
+  .dialog {
+    --cut: 16px;
+    --bw: 1px;
+    width: min(440px, 90vw);
+    padding: 24px;
+    background: var(--border);
+    filter: drop-shadow(0 24px 48px rgba(0,0,0,0.55));
+  }
+  .dialog::before { background: var(--surface); }
+
+  .dialog-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 8px; }
+  .dialog-body {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .toast {
+    --cut: 6px;
+    --bw: 1px;
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translate(-50%, 10px);
+    padding: 10px 22px;
+    font-size: 0.85rem;
+    background: var(--border);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 2000;
+  }
+  .toast::before { background: #1c2128; }
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* ── tooltip ── */
+  .ui-tip {
+    --cut: 5px;
+    --bw: 1px;
+    position: fixed;
+    z-index: 100;
+    max-width: 44ch;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    background: var(--border);
+    pointer-events: none;
+    white-space: pre-line;
+    display: none;
+  }
+  .ui-tip::before { background: #1c2128; }
+  .ui-tip.show { display: block; }
+
+  .tip-target {
+    text-decoration: underline dotted var(--text-muted);
+    text-underline-offset: 3px;
+    cursor: help;
+  }
+
+  /* ── motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    .wf-node--running, .dot--connecting, .wf-flash { animation: none; }
+    .btn, .toast, .proc-caret, .hchip, .seg-opt { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+  <h1>test ui demo</h1>
+  <p class="subtitle">this is a small sub-heading</p>
+
+  <!-- Buttons -->
+  <div class="chamfer card card--accent-left accent-cyan">
+    <p class="section-label">Buttons: Active, Disabled</p>
+    <div class="btn-row">
+      <button class="chamfer btn btn--cyan"><span>Active</span></button>
+      <button class="chamfer btn btn--disabled" disabled><span>Disabled</span></button>
+    </div>
+    <div class="btn-row">
+      <button class="chamfer btn btn--orange"><span>Active</span></button>
+      <button class="chamfer btn btn--disabled" disabled><span>Disabled</span></button>
+    </div>
+    <div class="btn-row">
+      <button class="chamfer btn btn--purple"><span>Active</span></button>
+      <button class="chamfer btn btn--disabled" disabled><span>Disabled</span></button>
+    </div>
+    <div class="btn-row">
+      <button class="chamfer btn btn--red"><span>Force stop</span></button>
+      <button class="chamfer btn btn--muted"><span>Cancel</span></button>
+    </div>
+  </div>
+
+  <!-- Segmented control -->
+  <div class="chamfer card card--accent-left accent-purple">
+    <p class="section-label">Segmented control</p>
+    <div class="chamfer seg" role="radiogroup" aria-label="Runtime">
+      <button class="seg-opt active" type="button">Docker</button>
+      <button class="seg-opt" type="button">Podman</button>
+      <button class="seg-opt" type="button">Local</button>
+    </div>
+    <p class="demo-note">Click an option — the group keeps its chamfered outline, only the fill moves.</p>
+  </div>
+
+  <!-- Form -->
+  <div class="chamfer card card--accent-left accent-green">
+    <p class="section-label">Form</p>
+    <p class="form-title">Title</p>
+    <div class="chamfer input-wrap">
+      <input class="input" type="text" placeholder="Placeholder text">
+    </div>
+  </div>
+
+  <!-- Status system -->
+  <div class="chamfer card card--accent-top accent-magenta">
+    <p class="section-label">Status system: badges &amp; glyphs</p>
+    <div class="badge-row">
+      <span class="chamfer badge badge--cyan"><span>Running</span></span>
+      <span class="chamfer badge badge--green"><span>Completed</span></span>
+      <span class="chamfer badge badge--yellow"><span>Cancelled</span></span>
+      <span class="chamfer badge badge--red"><span>Failed</span></span>
+      <span class="chamfer badge badge--purple"><span>Stalled</span></span>
+      <span class="chamfer badge badge--checking"><span>checking&hellip;</span></span>
+    </div>
+    <div class="glyph-row">
+      <span class="glyph-item"><span class="glyph glyph--waiting">○</span> waiting</span>
+      <span class="glyph-item"><span class="glyph glyph--running">◉</span> running</span>
+      <span class="glyph-item"><span class="glyph glyph--done">✓</span> done</span>
+      <span class="glyph-item"><span class="glyph glyph--graceful">!</span> graceful</span>
+      <span class="glyph-item"><span class="glyph glyph--failed">✗</span> failed</span>
+      <span class="glyph-item"><span class="glyph glyph--skipped">⊘</span> skipped</span>
+    </div>
+  </div>
+
+  <!-- Harness chips -->
+  <div class="chamfer card card--accent-left accent-yellow">
+    <p class="section-label">Harness chips</p>
+    <div class="hchip-row">
+      <span class="chamfer hchip hchip--opencode" data-tip="opencode · running for 2m 18s">O</span>
+      <span class="chamfer hchip hchip--claude" data-tip="claude · running for 1m 02s">C</span>
+      <span class="chamfer hchip hchip--codex" data-tip="codex · running for 44s">X</span>
+      <span class="chamfer hchip hchip--grok hchip--done" data-tip="grok · finished">G</span>
+      <span class="chamfer hchip hchip--cursor hchip--done" data-tip="cursor · finished">U</span>
+      <span class="chamfer hchip hchip--overflow" data-tip="3 more procs">+3</span>
+    </div>
+    <p class="demo-note">One letter per harness; finished chips dim. Hover for details.</p>
+  </div>
+
+  <!-- Chrome: status bar, breadcrumbs, tabs -->
+  <div class="chamfer card card--accent-left accent-cyan">
+    <p class="section-label">Chrome: status bar, breadcrumbs, tabs</p>
+    <div class="chamfer statusbar">
+      <nav class="crumbs" aria-label="Breadcrumbs">
+        <a href="#">scsh</a><span class="crumb-sep">›</span><a href="#">jobs</a><span class="crumb-sep">›</span><span class="mono">j-4f2a9c</span>
+      </nav>
+      <div class="statusbar-right">
+        <span class="dot dot--live"></span> live · up 3d 14h · v0.4.4
+      </div>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Pages">
+      <button class="tab active" role="tab" aria-selected="true" data-tab="run">Run</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="jobs">Jobs</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="projects">Projects</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="setup">Setup</button>
+    </div>
+    <p class="tab-panel-demo" id="tabPanelDemo">Pick a repo and launch a harness.</p>
+    <div class="dot-legend">
+      <span><span class="dot dot--live"></span> live</span>
+      <span><span class="dot dot--connecting"></span> connecting</span>
+      <span><span class="dot dot--down"></span> down</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="chamfer card card--accent-left accent-green">
+    <p class="section-label">Jobs table</p>
+    <div class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Job</th><th>Status</th><th>Started</th><th>Duration</th><th>Procs</th><th>Repo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="job-id">j-4f2a9c</span></td>
+            <td><span class="chamfer badge badge--cyan"><span>Running</span></span></td>
+            <td>10:41</td>
+            <td>3m 12s</td>
+            <td>
+              <span class="hchip-row">
+                <span class="chamfer hchip hchip--opencode">O</span>
+                <span class="chamfer hchip hchip--claude">C</span>
+                <span class="chamfer hchip hchip--codex">X</span>
+              </span>
+            </td>
+            <td><span class="repo-path">&#x2066;~/github/acme/api-server&#x2069;</span></td>
+          </tr>
+          <tr>
+            <td><span class="job-id">j-b81d03</span></td>
+            <td><span class="chamfer badge badge--green"><span>Completed</span></span></td>
+            <td>09:15</td>
+            <td>12m 44s</td>
+            <td>
+              <span class="hchip-row">
+                <span class="chamfer hchip hchip--claude hchip--done">C</span>
+                <span class="chamfer hchip hchip--grok hchip--done">G</span>
+              </span>
+            </td>
+            <td><span class="repo-path">&#x2066;~/github/acme/web-frontend&#x2069;</span></td>
+          </tr>
+          <tr>
+            <td><span class="job-id">j-77e6f1</span></td>
+            <td><span class="chamfer badge badge--red"><span>Failed</span></span></td>
+            <td>Yesterday</td>
+            <td>1m 03s</td>
+            <td>
+              <span class="hchip-row">
+                <span class="chamfer hchip hchip--codex hchip--done">X</span>
+                <span class="chamfer hchip hchip--overflow">+2</span>
+              </span>
+            </td>
+            <td><span class="repo-path">&#x2066;~/github/dimacurrentai/scsh&#x2069;</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Collapsible status rows -->
+  <div class="chamfer card card--accent-left accent-orange">
+    <p class="section-label">Collapsible status rows</p>
+
+    <details class="chamfer proc proc--running" open>
+      <summary>
+        <span class="proc-caret">▶</span>
+        <span class="proc-glyph">◉</span>
+        <span class="proc-name">build-and-test</span>
+        <span class="proc-meta">codex · elapsed 2m 18s</span>
+      </summary>
+      <div class="proc-body">
+        <div class="mono">container 9f3a1c…b2e4 · image scsh-codex:0.4.4</div>
+        Running <span class="mono">cargo test --workspace</span>, tail follows below.
+      </div>
+    </details>
+
+    <details class="chamfer proc proc--ok">
+      <summary>
+        <span class="proc-caret">▶</span>
+        <span class="proc-glyph">✓</span>
+        <span class="proc-name">lint</span>
+        <span class="proc-meta">0.9s</span>
+      </summary>
+      <div class="proc-body">
+        <div class="mono">clippy · 0 warnings · 0 errors</div>
+      </div>
+    </details>
+
+    <details class="chamfer proc proc--waiting">
+      <summary>
+        <span class="proc-caret">▶</span>
+        <span class="proc-glyph">○</span>
+        <span class="proc-name">deploy-preview</span>
+        <span class="proc-meta">waiting on build-and-test</span>
+      </summary>
+      <div class="proc-body">
+        Queued; starts when its dependency finishes.
+      </div>
+    </details>
+
+    <details class="chamfer proc proc--fail">
+      <summary>
+        <span class="proc-caret">▶</span>
+        <span class="proc-glyph">✗</span>
+        <span class="proc-name">integration-tests</span>
+        <span class="proc-meta">exit 1 · 4m 02s</span>
+      </summary>
+      <div class="proc-body">
+        <div class="mono">2 of 148 tests failed</div>
+        See the log tail for the failing assertions.
+      </div>
+    </details>
+  </div>
+
+  <!-- Workflow nodes -->
+  <div class="chamfer card card--accent-left accent-magenta">
+    <p class="section-label">Workflow nodes</p>
+    <div class="wf-row">
+      <div class="chamfer wf-node wf-node--done">
+        <div class="wf-head"><span class="wf-ico">✓</span><span>lint</span></div>
+        <div class="wf-meta">codex · 0.9s</div>
+      </div>
+      <div class="chamfer wf-node wf-node--running">
+        <div class="wf-head"><span class="wf-ico">◉</span><span>build-and-test</span></div>
+        <div class="wf-meta">codex · 2m 18s</div>
+      </div>
+      <div class="chamfer wf-node wf-node--waiting">
+        <div class="wf-head"><span class="wf-ico">○</span><span>deploy-preview</span></div>
+        <div class="wf-meta">waiting</div>
+      </div>
+      <div class="chamfer wf-node wf-node--failed">
+        <div class="wf-head"><span class="wf-ico">✗</span><span>integration-tests</span></div>
+        <div class="wf-meta">exit 1 · 4m 02s</div>
+      </div>
+      <div class="chamfer wf-node wf-node--skipped">
+        <div class="wf-head"><span class="wf-ico">⊘</span><span>publish</span></div>
+        <div class="wf-meta">skipped</div>
+      </div>
+    </div>
+
+    <div class="wf-outcome-row">
+      <span class="chamfer wf-outcome wf-outcome--ok"><span>Job succeeded</span></span>
+      <span class="chamfer wf-outcome wf-outcome--running"><span>Job running</span></span>
+      <span class="chamfer wf-outcome wf-outcome--fail"><span>Job failed</span></span>
+      <span class="chamfer wf-gate"><span>when: tests-pass</span></span>
+    </div>
+
+    <div class="chamfer wf-loop">
+      <p class="wf-loop-title">Loop · iteration 3 of 5</p>
+      <div class="wf-row">
+        <div class="chamfer wf-node wf-node--sm wf-node--done">
+          <div class="wf-head"><span class="wf-ico">✓</span><span>review #2</span></div>
+          <div class="wf-meta">claude · 58s</div>
+        </div>
+        <div class="chamfer wf-node wf-node--sm wf-node--running">
+          <div class="wf-head"><span class="wf-ico">◉</span><span>review #3</span></div>
+          <div class="wf-meta">claude · 12s</div>
+        </div>
+        <div style="display:flex;align-items:center;">
+          <span class="chamfer wf-loop-progress"><span>↻ 2 more planned</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workflow diagram -->
+  <div class="chamfer card card--accent-left accent-magenta">
+    <p class="section-label">Workflow diagram</p>
+    <div class="wf-diagram-head">
+      <span class="chamfer wf-outcome wf-outcome--running"><span>Job running</span></span>
+      <span class="wf-summary">6 nodes ·
+        <a href="#" class="wf-jump" data-jump="wfIt">1 running</a> ·
+        <a href="#" class="wf-jump" data-jump="wfLint">3 done</a> ·
+        <a href="#" class="wf-jump" data-jump="wfDp">1 failed</a> ·
+        <a href="#" class="wf-jump" data-jump="wfPub">1 waiting</a></span>
+      <span class="wf-zoom" aria-label="Graph view controls">
+        <button class="chamfer wf-zbtn" id="wfZoomOut" type="button" aria-label="Zoom out"><span>−</span></button>
+        <button class="chamfer wf-zbtn" id="wfZoomReset" type="button"><span>100%</span></button>
+        <button class="chamfer wf-zbtn" id="wfZoomIn" type="button" aria-label="Zoom in"><span>+</span></button>
+        <button class="chamfer wf-zbtn" id="wfZoomFit" type="button"><span>Fit</span></button>
+      </span>
+    </div>
+    <div class="workflow-visual">
+      <ul class="chamfer workflow-legend">
+        <li><span class="glyph glyph--running">◉</span> running</li>
+        <li><span class="glyph glyph--done">✓</span> done</li>
+        <li><span class="glyph glyph--failed">✗</span> failed</li>
+        <li><span class="glyph glyph--waiting">○</span> waiting</li>
+      </ul>
+      <div class="chamfer workflow-scroll" role="region" aria-label="Job dependency graph" tabindex="0">
+        <div class="workflow-stage" id="wfStage" style="width:1070px;height:285px">
+          <svg class="workflow-edges" id="wfEdges" width="1070" height="285" viewBox="0 0 1070 285" aria-hidden="true">
+            <defs>
+              <marker id="wf-arrow" viewBox="0 0 14 14" refX="12" refY="7" markerWidth="9" markerHeight="9" orient="auto" markerUnits="userSpaceOnUse">
+                <path class="wf-arrowhead" d="M3.5 2.5 L11 7 L3.5 11.5" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              </marker>
+            </defs>
+          </svg>
+          <div class="chamfer wf-bookend" style="left:12px;top:117px" id="wfStart" aria-hidden="true"><span class="wf-start-play"></span></div>
+          <div class="chamfer wf-node wf-node--done" id="wfLint" style="left:100px;top:30px">
+            <div class="wf-head"><span class="wf-ico">✓</span><span>lint</span></div>
+            <div class="wf-meta">codex · 0.9s</div>
+          </div>
+          <div class="chamfer wf-node wf-node--done wf-node--build" id="wfImg" style="left:100px;top:180px">
+            <div class="wf-head"><span class="wf-ico">✓</span><span>scsh-codex:0.4.4</span></div>
+            <div class="wf-meta">image build · 38s</div>
+          </div>
+          <div class="chamfer wf-node wf-node--done" id="wfBat" style="left:330px;top:105px">
+            <div class="wf-head"><span class="wf-ico">✓</span><span>build-and-test</span></div>
+            <div class="wf-meta">codex · 5m 12s</div>
+          </div>
+          <div class="chamfer wf-node wf-node--running" id="wfIt" style="left:560px;top:30px">
+            <div class="wf-head"><span class="wf-ico">◉</span><span>integration-tests</span></div>
+            <div class="wf-meta">codex · 1m 44s</div>
+          </div>
+          <div class="chamfer wf-node wf-node--failed" id="wfDp" style="left:560px;top:180px">
+            <div class="wf-head"><span class="wf-ico">✗</span><span>deploy-preview</span></div>
+            <div class="wf-meta">exit 1 · 12s</div>
+          </div>
+          <div class="chamfer wf-node wf-node--waiting" id="wfPub" style="left:790px;top:105px">
+            <div class="wf-head"><span class="wf-ico">○</span><span>publish</span></div>
+            <div class="wf-meta"><span class="chamfer wf-gate"><span>when: tests-pass</span></span></div>
+          </div>
+          <div class="chamfer wf-bookend" style="left:1010px;top:117px" id="wfFinish" aria-hidden="true"><span class="wf-finish-flag"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Banners -->
+  <div class="chamfer card card--accent-left accent-red">
+    <p class="section-label">Banners</p>
+    <div class="chamfer banner banner--danger">
+      <p class="banner-title">Cannot run in this repo</p>
+      <ul>
+        <li>working tree has uncommitted changes</li>
+        <li>no harness configured for <span class="mono">rust</span></li>
+      </ul>
+    </div>
+    <div class="chamfer banner banner--info">
+      <span>Showing project <span class="mono">acme/api-server</span> · <a href="#">Show all</a></span>
+    </div>
+  </div>
+
+  <!-- Log output -->
+  <div class="chamfer card card--accent-left accent-purple">
+    <p class="section-label">Log output</p>
+    <div class="chamfer output">
+      <div class="output-scroll">
+        <div class="line"><span class="at">+0.0s</span>❯ cargo test --workspace</div>
+        <div class="line"><span class="at">+1.2s</span>Compiling scsh v0.4.4</div>
+        <div class="line"><span class="at">+6.4s</span>Finished test profile in 5.2s</div>
+        <div class="line line--ok"><span class="at">+8.7s</span>✓ 214 tests passed</div>
+        <div class="line line--warn"><span class="at">+8.9s</span>warning: unused variable `cast_id`</div>
+        <div class="line line--err"><span class="at">+9.0s</span>✗ e2e::daemon_restart — assertion failed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dialog & toast -->
+  <div class="chamfer card card--accent-left accent-orange">
+    <p class="section-label">Dialog &amp; toast</p>
+    <div class="btn-row">
+      <button class="chamfer btn btn--red" id="openDialog"><span>Force stop&hellip;</span></button>
+      <button class="chamfer btn btn--cyan" id="showToast"><span>Show toast</span></button>
+    </div>
+    <p class="demo-note">The dialog replaces the browser confirm; the toast is non-blocking feedback.</p>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="chamfer card card--accent-left accent-cyan">
+    <p class="section-label">Tooltip</p>
+    <p style="font-size:0.9rem;">
+      Job <span class="tip-target mono" data-tip="started 10:41 · branch main&#10;profile: code-review">j-4f2a9c</span>
+      is running <span class="tip-target" data-tip="opencode ✓ · claude ✓ · codex ◉ running for 2m 18s">3 procs</span>;
+      one earlier proc exited <span class="tip-target" data-tip="finished on its own after the stop signal, before the kill deadline">gracefully</span>.
+    </p>
+  </div>
+
+  <!-- overlays -->
+  <div class="overlay" id="overlay">
+    <div class="chamfer dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+      <p class="dialog-title" id="dlgTitle">Force stop job j-4f2a9c?</p>
+      <p class="dialog-body">All 3 running procs will be killed immediately. Partial results are kept, but casts may be truncated.</p>
+      <div class="dialog-actions">
+        <button class="chamfer btn btn--muted" id="dlgCancel"><span>Cancel</span></button>
+        <button class="chamfer btn btn--red" id="dlgConfirm"><span>Force stop</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chamfer toast" id="toast" role="status"><span></span></div>
+  <div class="chamfer ui-tip" id="uiTip"><span></span></div>
+
+<script>
+  // tabs
+  const tabPanelCopy = {
+    run: 'Pick a repo and launch a harness.',
+    jobs: '12 jobs · 3 running.',
+    projects: '4 projects tracked.',
+    setup: '2 harnesses ready, 1 needs auth.'
+  };
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      document.getElementById('tabPanelDemo').textContent = tabPanelCopy[tab.dataset.tab];
+    });
+  });
+
+  // segmented control
+  document.querySelectorAll('.seg').forEach(seg => {
+    seg.querySelectorAll('.seg-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        seg.querySelectorAll('.seg-opt').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+      });
+    });
+  });
+
+  // toast
+  let toastTimer;
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.querySelector('span').textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+  document.getElementById('showToast').addEventListener('click', () => showToast('Snapshot exported'));
+
+  // dialog
+  const overlay = document.getElementById('overlay');
+  document.getElementById('openDialog').addEventListener('click', () => overlay.classList.add('open'));
+  document.getElementById('dlgCancel').addEventListener('click', () => overlay.classList.remove('open'));
+  document.getElementById('dlgConfirm').addEventListener('click', () => {
+    overlay.classList.remove('open');
+    showToast('Force stop requested');
+  });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') overlay.classList.remove('open');
+  });
+
+  // workflow diagram edges
+  (function () {
+    const EDGES = [
+      ['wfStart', 'wfLint'], ['wfStart', 'wfImg'],
+      ['wfLint', 'wfBat'], ['wfImg', 'wfBat'],
+      ['wfBat', 'wfIt'], ['wfBat', 'wfDp'],
+      ['wfIt', 'wfPub'], ['wfDp', 'wfPub'],
+      ['wfPub', 'wfFinish']
+    ];
+    const svg = document.getElementById('wfEdges');
+    const geo = {};
+    new Set(EDGES.flat()).forEach(id => {
+      const el = document.getElementById(id);
+      geo[id] = { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+      geo[id].cy = geo[id].y + geo[id].h / 2;
+    });
+    // fan-in/out ports: sort each node's edges by the other end's y so ports
+    // top-to-bottom match visual order
+    const out = {}, inn = {};
+    EDGES.forEach(([s, d], i) => {
+      (out[s] = out[s] || []).push(i);
+      (inn[d] = inn[d] || []).push(i);
+    });
+    Object.values(out).forEach(l => l.sort((a, b) => geo[EDGES[a][1]].cy - geo[EDGES[b][1]].cy));
+    Object.values(inn).forEach(l => l.sort((a, b) => geo[EDGES[a][0]].cy - geo[EDGES[b][0]].cy));
+    // single edge → face center; several → evenly spaced with a corner margin
+    function portY(g, idx, count) {
+      if (count <= 1) return g.cy;
+      const m = g.h * 0.22;
+      return g.y + m + (g.h - 2 * m) * idx / (count - 1);
+    }
+    EDGES.forEach(([s, d], i) => {
+      const gs = geo[s], gd = geo[d];
+      const x1 = gs.x + gs.w, x2 = gd.x - 1.5;
+      const y1 = portY(gs, out[s].indexOf(i), out[s].length);
+      const y2 = portY(gd, inn[d].indexOf(i), inn[d].length);
+      let path;
+      if (Math.abs(y1 - y2) < 0.5) {
+        path = `M${x1},${y1} L${x2},${y1}`;
+      } else {
+        // horizontal runways at both ends so arrows meet card edges at right angles
+        const run = Math.min(20, Math.max(12, (x2 - x1) * 0.24));
+        const cs = x1 + run, ce = x2 - run, dx = Math.max(ce - cs, 1);
+        path = `M${x1},${y1} L${cs},${y1} C${cs + dx * 0.42},${y1} ${ce - dx * 0.42},${y2} ${ce},${y2} L${x2},${y2}`;
+      }
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('class', 'wf-edge');
+      p.setAttribute('d', path);
+      p.setAttribute('marker-end', 'url(#wf-arrow)');
+      svg.appendChild(p);
+    });
+  })();
+
+  // workflow zoom + summary jump links
+  (function () {
+    const stage = document.getElementById('wfStage');
+    const scroll = stage.parentElement;
+    const resetBtn = document.getElementById('wfZoomReset');
+    let zoom = 1;
+    function setZoom(z) {
+      zoom = Math.min(2, Math.max(0.4, z));
+      stage.style.zoom = zoom;
+      resetBtn.querySelector('span').textContent = Math.round(zoom * 100) + '%';
+    }
+    document.getElementById('wfZoomOut').addEventListener('click', () => setZoom(zoom - 0.1));
+    document.getElementById('wfZoomIn').addEventListener('click', () => setZoom(zoom + 0.1));
+    resetBtn.addEventListener('click', () => setZoom(1));
+    document.getElementById('wfZoomFit').addEventListener('click', () =>
+      setZoom((scroll.clientWidth - 20) / stage.offsetWidth));
+    document.querySelectorAll('.wf-jump').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const node = document.getElementById(a.dataset.jump);
+        node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        node.classList.remove('wf-flash');
+        void node.offsetWidth;
+        node.classList.add('wf-flash');
+      });
+    });
+  })();
+
+  // tooltip
+  const tip = document.getElementById('uiTip');
+  const tipText = tip.querySelector('span');
+  document.querySelectorAll('[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      tipText.textContent = el.dataset.tip;
+      tip.classList.add('show');
+    });
+    el.addEventListener('mousemove', e => {
+      const pad = 14;
+      const r = tip.getBoundingClientRect();
+      let x = e.clientX + pad, y = e.clientY + pad;
+      if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+      if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+      tip.style.left = x + 'px';
+      tip.style.top = y + 'px';
+    });
+    el.addEventListener('mouseleave', () => tip.classList.remove('show'));
+  });
+</script>
+
+</body>
+</html>
