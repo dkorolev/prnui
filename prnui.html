@@ -86,10 +86,12 @@
       calc(100% - var(--inner)) 100%, var(--inner) 100%,
       0% calc(100% - var(--inner)), 0% var(--inner)
     );
-    z-index: 0;
+    /* clip-path makes .chamfer a stacking context, so -1 keeps the surface above the
+       element's own ring background yet under in-flow content — bare text nodes stay
+       visible without span wrappers */
+    z-index: -1;
   }
-
-  /* the ::before surface paints above in-flow text; lift all children over it */
+  /* belt and braces for element children: lift them over the surface anyway */
   .chamfer > * { position: relative; z-index: 1; }
 
   /* ── card ── */
@@ -197,12 +199,12 @@
   .btn--muted::before { background: var(--surface); }
   .btn--muted:not(.btn--disabled):hover { color: var(--text); }
 
-  .btn--disabled {
+  .btn--disabled, .btn:disabled {
     background: var(--border);
     color: var(--text-muted);
     cursor: not-allowed;
   }
-  .btn--disabled::before {
+  .btn--disabled::before, .btn:disabled::before {
     background: var(--surface);
   }
 
@@ -294,26 +296,20 @@
     text-transform: uppercase;
   }
 
-  .badge--cyan   { background: var(--cyan);   color: var(--cyan); }
-  .badge--cyan::before   { background: var(--surface); }
-  .badge--green  { background: var(--green);  color: var(--green); }
-  .badge--green::before  { background: var(--surface); }
-  .badge--yellow { background: var(--yellow); color: var(--yellow); }
-  .badge--yellow::before { background: var(--surface); }
-  .badge--red    { background: var(--red);    color: var(--red); }
-  .badge--red::before    { background: var(--surface); }
-  .badge--purple { background: var(--purple); color: var(--purple); }
-  .badge--purple::before { background: var(--surface); }
+  .badge { background: var(--badge, var(--border)); color: var(--badge, var(--text-muted)); }
+  .badge::before { background: var(--surface); }
+  .badge--cyan   { --badge: var(--cyan); }
+  .badge--green  { --badge: var(--green); }
+  .badge--yellow { --badge: var(--yellow); }
+  .badge--red    { --badge: var(--red); }
+  .badge--purple { --badge: var(--purple); }
 
   /* skeleton state while real status is being fetched */
   .badge--checking {
-    background: var(--border);
-    color: var(--text-muted);
     text-transform: none;
     letter-spacing: normal;
     font-weight: 500;
   }
-  .badge--checking::before { background: var(--surface); }
 
   .glyph-row {
     display: flex;
@@ -631,12 +627,11 @@
     font-size: 0.78rem;
     font-weight: 600;
   }
-  .wf-outcome--ok { background: var(--green); color: var(--green); }
-  .wf-outcome--ok::before { background: color-mix(in srgb, var(--green) 12%, var(--surface)); }
-  .wf-outcome--running { background: var(--orange); color: var(--orange); }
-  .wf-outcome--running::before { background: color-mix(in srgb, var(--orange) 12%, var(--surface)); }
-  .wf-outcome--fail { background: var(--red); color: var(--red); }
-  .wf-outcome--fail::before { background: color-mix(in srgb, var(--red) 12%, var(--surface)); }
+  .wf-outcome { background: var(--outcome); color: var(--outcome); }
+  .wf-outcome::before { background: color-mix(in srgb, var(--outcome) 12%, var(--surface)); }
+  .wf-outcome--ok      { --outcome: var(--green); }
+  .wf-outcome--running { --outcome: var(--orange); }
+  .wf-outcome--fail    { --outcome: var(--red); }
 
   .wf-gate {
     --cut: 2px;
@@ -900,13 +895,15 @@
   }
   .overlay.open { display: flex; }
 
+  /* filter is applied before clip-path, so a drop-shadow on the chamfered box itself
+     is clipped away — the unclipped wrapper carries it */
+  .dialog-shadow { filter: drop-shadow(0 24px 48px rgba(0,0,0,0.55)); }
   .dialog {
     --cut: 16px;
     --bw: 1px;
     width: min(440px, 90vw);
     padding: 24px;
     background: var(--border);
-    filter: drop-shadow(0 24px 48px rgba(0,0,0,0.55));
   }
   .dialog::before { background: var(--surface); }
 
@@ -1004,9 +1001,9 @@
   <div class="chamfer card card--accent-left accent-purple">
     <p class="section-label">Segmented control</p>
     <div class="chamfer seg" role="radiogroup" aria-label="Runtime">
-      <button class="seg-opt active" type="button">Docker</button>
-      <button class="seg-opt" type="button">Podman</button>
-      <button class="seg-opt" type="button">Local</button>
+      <button class="seg-opt active" type="button" role="radio" aria-checked="true">Docker</button>
+      <button class="seg-opt" type="button" role="radio" aria-checked="false">Podman</button>
+      <button class="seg-opt" type="button" role="radio" aria-checked="false">Local</button>
     </div>
     <p class="demo-note">Click an option — the group keeps its chamfered outline, only the fill moves.</p>
   </div>
@@ -1067,12 +1064,12 @@
       </div>
     </div>
     <div class="tabs" role="tablist" aria-label="Pages">
-      <button class="tab active" role="tab" aria-selected="true" data-tab="run">Run</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="jobs">Jobs</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="projects">Projects</button>
-      <button class="tab" role="tab" aria-selected="false" data-tab="setup">Setup</button>
+      <button class="tab active" role="tab" aria-selected="true" aria-controls="tabPanelDemo" data-tab="run">Run</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelDemo" data-tab="jobs">Jobs</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelDemo" data-tab="projects">Projects</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelDemo" data-tab="setup">Setup</button>
     </div>
-    <p class="tab-panel-demo" id="tabPanelDemo">Pick a repo and launch a harness.</p>
+    <p class="tab-panel-demo" id="tabPanelDemo" role="tabpanel">Pick a repo and launch a harness.</p>
     <div class="dot-legend">
       <span><span class="dot dot--live"></span> live</span>
       <span><span class="dot dot--connecting"></span> connecting</span>
@@ -1358,12 +1355,14 @@
 
   <!-- overlays -->
   <div class="overlay" id="overlay">
-    <div class="chamfer dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
-      <p class="dialog-title" id="dlgTitle">Force stop job j-4f2a9c?</p>
-      <p class="dialog-body">All 3 running procs will be killed immediately. Partial results are kept, but casts may be truncated.</p>
-      <div class="dialog-actions">
-        <button class="chamfer btn btn--muted" id="dlgCancel"><span>Cancel</span></button>
-        <button class="chamfer btn btn--red" id="dlgConfirm"><span>Force stop</span></button>
+    <div class="dialog-shadow">
+      <div class="chamfer dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+        <p class="dialog-title" id="dlgTitle">Force stop job j-4f2a9c?</p>
+        <p class="dialog-body">All 3 running procs will be killed immediately. Partial results are kept, but casts may be truncated.</p>
+        <div class="dialog-actions">
+          <button class="chamfer btn btn--muted" id="dlgCancel" type="button"><span>Cancel</span></button>
+          <button class="chamfer btn btn--red" id="dlgConfirm" type="button"><span>Force stop</span></button>
+        </div>
       </div>
     </div>
   </div>
@@ -1395,8 +1394,12 @@
   document.querySelectorAll('.seg').forEach(seg => {
     seg.querySelectorAll('.seg-opt').forEach(opt => {
       opt.addEventListener('click', () => {
-        seg.querySelectorAll('.seg-opt').forEach(o => o.classList.remove('active'));
+        seg.querySelectorAll('.seg-opt').forEach(o => {
+          o.classList.remove('active');
+          o.setAttribute('aria-checked', 'false');
+        });
         opt.classList.add('active');
+        opt.setAttribute('aria-checked', 'true');
       });
     });
   });
@@ -1412,19 +1415,38 @@
   }
   document.getElementById('showToast').addEventListener('click', () => showToast('Snapshot exported'));
 
-  // dialog
+  // dialog: focus moves onto Confirm, Tab cycles inside, and focus returns on close
   const overlay = document.getElementById('overlay');
-  document.getElementById('openDialog').addEventListener('click', () => overlay.classList.add('open'));
-  document.getElementById('dlgCancel').addEventListener('click', () => overlay.classList.remove('open'));
-  document.getElementById('dlgConfirm').addEventListener('click', () => {
+  const dlg = document.getElementById('dlg');
+  const dlgConfirm = document.getElementById('dlgConfirm');
+  let dlgPrevFocus = null;
+  function openDialog() {
+    dlgPrevFocus = document.activeElement;
+    overlay.classList.add('open');
+    dlgConfirm.focus();
+  }
+  function closeDialog() {
     overlay.classList.remove('open');
+    if (dlgPrevFocus && document.contains(dlgPrevFocus)) dlgPrevFocus.focus();
+  }
+  document.getElementById('openDialog').addEventListener('click', openDialog);
+  document.getElementById('dlgCancel').addEventListener('click', closeDialog);
+  dlgConfirm.addEventListener('click', () => {
+    closeDialog();
     showToast('Force stop requested');
   });
   overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('open');
+    if (e.target === overlay) closeDialog();
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') overlay.classList.remove('open');
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape') { closeDialog(); return; }
+    if (e.key !== 'Tab') return;
+    const f = dlg.querySelectorAll('button:not(:disabled)');
+    const first = f[0], last = f[f.length - 1];
+    if (!dlg.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
   // workflow diagram edges
@@ -1511,21 +1533,31 @@
   // tooltip
   const tip = document.getElementById('uiTip');
   const tipText = tip.querySelector('span');
+  function placeTip(cx, cy) {
+    const pad = 14;
+    const r = tip.getBoundingClientRect();
+    let x = cx + pad, y = cy + pad;
+    if (x + r.width > innerWidth - 8) x = cx - r.width - pad;
+    if (y + r.height > innerHeight - 8) y = cy - r.height - pad;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function showTip(el, cx, cy) {
+    tipText.textContent = el.dataset.tip;
+    tip.classList.add('show');
+    placeTip(cx, cy);
+  }
+  const hideTip = () => tip.classList.remove('show');
   document.querySelectorAll('[data-tip]').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      tipText.textContent = el.dataset.tip;
-      tip.classList.add('show');
+    if (!el.hasAttribute('tabindex') && !el.matches('a,button,input')) el.tabIndex = 0;
+    el.addEventListener('mouseenter', e => showTip(el, e.clientX, e.clientY));
+    el.addEventListener('mousemove', e => placeTip(e.clientX, e.clientY));
+    el.addEventListener('mouseleave', hideTip);
+    el.addEventListener('focus', () => {
+      const r = el.getBoundingClientRect();
+      showTip(el, r.left, r.bottom);
     });
-    el.addEventListener('mousemove', e => {
-      const pad = 14;
-      const r = tip.getBoundingClientRect();
-      let x = e.clientX + pad, y = e.clientY + pad;
-      if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
-      if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
-      tip.style.left = x + 'px';
-      tip.style.top = y + 'px';
-    });
-    el.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    el.addEventListener('blur', hideTip);
   });
 </script>
 
