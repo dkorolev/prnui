@@ -3,16 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UI Demo</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap" rel="stylesheet">
+<title>PRN UI Component System</title>
 <style>
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  html { scroll-behavior: smooth; }
 
   :root {
     --bg:        #0d1117;
     --surface:   #161b22;
+    --surface-deep: #090d12;
+    --surface-raised: #1c2330;
     --border:    #2a3140;
     --text:      #e6edf3;
     --text-muted:#7d8590;
@@ -23,11 +24,13 @@
     --red:       #f85149;
     --magenta:   #bc4dff;
     --purple:    #8957e5;
+    --overlay:   rgba(0,0,0,0.60);
+    --shadow:    rgba(0,0,0,0.45);
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   body {
-    font-family: 'Ubuntu', sans-serif;
+    font-family: Ubuntu, 'Ubuntu Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: var(--bg);
     color: var(--text);
     padding: 40px 32px;
@@ -86,12 +89,10 @@
       calc(100% - var(--inner)) 100%, var(--inner) 100%,
       0% calc(100% - var(--inner)), 0% var(--inner)
     );
-    /* clip-path makes .chamfer a stacking context, so -1 keeps the surface above the
-       element's own ring background yet under in-flow content — bare text nodes stay
-       visible without span wrappers */
-    z-index: -1;
+    z-index: 0;
   }
-  /* belt and braces for element children: lift them over the surface anyway */
+
+  /* the ::before surface paints above in-flow text; lift all children over it */
   .chamfer > * { position: relative; z-index: 1; }
 
   /* ── card ── */
@@ -104,6 +105,20 @@
     margin-bottom: 28px;
   }
   .card::before { background: var(--surface); }
+  .card::after {
+    content: attr(data-section-ref);
+    position: absolute;
+    z-index: 2;
+    top: 18px;
+    right: 16px;
+    padding-left: 8px;
+    border-left: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    color: color-mix(in srgb, var(--accent) 46%, var(--text-muted));
+    font: 600 0.72rem/1 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+  }
+  .card > .section-label:first-child { padding-right: 34px; }
 
   /* accent edge: the outer layer paints an accent stripe wide enough to wrap
      the chamfered corners, and the surface is inset further on that side */
@@ -150,7 +165,6 @@
     color: var(--text);
     border: none;
     cursor: pointer;
-    transition: transform 0.1s;
   }
   .btn::before {
     transition: background 0.2s;
@@ -158,9 +172,6 @@
 
   .btn:not(.btn--disabled):hover::before {
     background: var(--btn-fill) !important;
-  }
-  .btn:not(.btn--disabled):active {
-    transform: scale(0.97);
   }
   .btn:not(.btn--disabled):active::before {
     filter: brightness(0.85);
@@ -199,12 +210,12 @@
   .btn--muted::before { background: var(--surface); }
   .btn--muted:not(.btn--disabled):hover { color: var(--text); }
 
-  .btn--disabled, .btn:disabled {
+  .btn--disabled {
     background: var(--border);
     color: var(--text-muted);
     cursor: not-allowed;
   }
-  .btn--disabled::before, .btn:disabled::before {
+  .btn--disabled::before {
     background: var(--surface);
   }
 
@@ -224,6 +235,7 @@
     color: var(--text-muted);
     font-family: inherit;
     font-size: 0.85rem;
+    font-weight: 500;
     padding: 8px 22px;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
@@ -233,7 +245,6 @@
   .seg-opt.active {
     background: var(--purple);
     color: #fff;
-    font-weight: 500;
   }
   /* first/last options carry their own inner chamfer so the ring
      stays visible along the group's corner diagonals */
@@ -248,6 +259,448 @@
       0% 0%, calc(100% - var(--seg-inner)) 0%, 100% var(--seg-inner),
       100% calc(100% - var(--seg-inner)), calc(100% - var(--seg-inner)) 100%, 0% 100%
     );
+  }
+
+  /* ── scrollable segmented rail ── */
+  .scrollseg-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .scrollseg-summary { color: var(--text-muted); font-size: 0.8rem; }
+  .scrollseg-pinned-count {
+    min-width: 70px;
+    margin-left: auto;
+    color: var(--cyan);
+    font: 0.72rem/1.4 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .scrollseg-viewport { position: relative; }
+  .scrollseg-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 100%;
+    padding-bottom: 8px;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: var(--purple) transparent;
+    scrollbar-width: thin;
+    scroll-padding-inline: 12px;
+  }
+  .scrollseg-scroll::-webkit-scrollbar { height: 7px; }
+  .scrollseg-scroll::-webkit-scrollbar-track { background: transparent; }
+  .scrollseg-scroll::-webkit-scrollbar-thumb {
+    background: var(--purple);
+    border-radius: 0;
+  }
+  .scrollseg-scroll:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 3px;
+  }
+  .scrollseg-track {
+    width: max-content;
+    display: flex;
+    gap: 9px;
+    padding: 1px;
+  }
+  .scrollseg-slot {
+    position: relative;
+    width: 190px;
+    height: 84px;
+    flex: 0 0 190px;
+  }
+  .scrollseg-slot.is-pinned { order: -1; }
+
+  .scrollseg-option {
+    --cut: 6px;
+    --bw: 1px;
+    position: relative;
+    width: 190px;
+    height: 84px;
+    flex: 0 0 190px;
+    background: var(--border);
+  }
+  .scrollseg-option::before { background: var(--surface); }
+  .scrollseg-option.active { background: var(--purple); }
+  .scrollseg-option.active::before {
+    background: color-mix(in srgb, var(--purple) 24%, var(--surface));
+  }
+
+  .scrollseg-option > .scrollseg-select {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    padding: 12px 38px 10px 14px;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .scrollseg-select:focus-visible { outline: 2px solid var(--cyan); outline-offset: -3px; }
+  .scrollseg-kicker {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-muted);
+    font: 0.64rem/1.2 var(--font-mono);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  .scrollseg-title {
+    display: block;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .scrollseg-detail {
+    display: block;
+    overflow: hidden;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .scrollseg-option--mono .scrollseg-title,
+  .scrollseg-option--mono .scrollseg-detail { font-family: var(--font-mono); }
+  .scrollseg-option--editorial .scrollseg-title { font-family: Georgia, serif; }
+  .scrollseg-option.active .scrollseg-kicker { color: #c8b5ff; }
+  .scrollseg-option.active .scrollseg-detail { color: #d8cff1; }
+
+  .scrollseg-option > .scrollseg-pin {
+    position: absolute;
+    z-index: 2;
+    top: 8px;
+    right: 8px;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    color: color-mix(in srgb, var(--text-muted) 72%, transparent);
+    background: transparent;
+    cursor: pointer;
+  }
+  .scrollseg-pin::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 3px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid currentColor;
+    transform: rotate(45deg);
+  }
+  .scrollseg-pin::after {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 12px;
+    width: 2px;
+    height: 9px;
+    background: currentColor;
+  }
+  .scrollseg-pin:hover,
+  .scrollseg-pin:focus-visible { color: var(--cyan); outline: none; }
+  .scrollseg-option.is-pinned .scrollseg-pin { color: var(--text-muted); }
+  .scrollseg-option.is-pinned .scrollseg-pin::before { background: currentColor; }
+  .scrollseg-pin:disabled {
+    color: color-mix(in srgb, var(--text-muted) 26%, transparent);
+    cursor: not-allowed;
+  }
+  .scrollseg-example + .scrollseg-example {
+    padding-top: 20px;
+    margin-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .scrollseg.pinning-unnecessary .scrollseg-pinned-count { color: var(--text-muted); }
+
+  /* ── hierarchical checkboxes ── */
+  .checktree {
+    --cut: 8px;
+    --bw: 1px;
+    padding: 16px 18px 18px;
+    background: var(--border);
+  }
+  .checktree::before { background: var(--bg); }
+
+  .checktree-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .checktree-title { font-size: 0.9rem; font-weight: 600; }
+  .checktree-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+  }
+  .checktree-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .checktree-key {
+    width: 7px;
+    height: 7px;
+    transform: rotate(45deg);
+  }
+  .checktree-key--readonly { background: var(--green); }
+  .checktree-key--mutable { background: var(--orange); }
+
+  /* bounded horizontal scroll so the chamfer clip never hides tree content */
+  .checktree-scroll {
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .checktree-scroll:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  .tree-list { list-style: none; }
+  .tree-list .tree-list {
+    margin-left: 9px;
+    padding-left: 25px;
+    border-left: 1px solid var(--border);
+  }
+  .tree-list .tree-list > li { position: relative; }
+  .tree-branch { position: relative; }
+  .tree-list .tree-list > li::before {
+    content: '';
+    position: absolute;
+    left: -25px;
+    top: 17px;
+    width: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .tree-label {
+    --check-color: var(--cyan);
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 5px 3px;
+    font-size: 0.84rem;
+    cursor: pointer;
+  }
+  .tree-label:hover .tree-name { color: var(--text); }
+  .tree-label--branch { --check-color: var(--text-muted); }
+  .tree-label--branch .tree-name { font-weight: 600; }
+  .tree-label--readonly { --check-color: var(--green); }
+  .tree-label--mutable { --check-color: var(--orange); }
+
+  .tree-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .tree-box {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    border: 2px solid color-mix(in srgb, var(--check-color) 55%, var(--border));
+    clip-path: polygon(3px 0, 100% 0, 100% calc(100% - 3px), calc(100% - 3px) 100%, 0 100%, 0 3px);
+  }
+  .tree-box::after {
+    content: '';
+    position: absolute;
+    display: none;
+  }
+  .tree-input:checked + .tree-box,
+  .tree-input:indeterminate + .tree-box {
+    border-color: var(--check-color);
+    background: color-mix(in srgb, var(--check-color) 18%, transparent);
+  }
+  .tree-input:checked + .tree-box::after {
+    display: block;
+    left: 3px;
+    top: 2px;
+    width: 8px;
+    height: 5px;
+    border-left: 2px solid var(--check-color);
+    border-bottom: 2px solid var(--check-color);
+    transform: rotate(-45deg);
+  }
+  .tree-input:indeterminate + .tree-box::after {
+    display: block;
+    left: 3px;
+    top: 6px;
+    width: 8px;
+    height: 2px;
+    background: var(--check-color);
+  }
+  .tree-input:focus-visible + .tree-box {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  .tree-label--branch .tree-box {
+    --triangle-neutral: var(--surface-deep);
+    --triangle-top: var(--triangle-neutral);
+    --triangle-right: var(--triangle-neutral);
+    --triangle-bottom: var(--triangle-neutral);
+    --triangle-left: var(--triangle-neutral);
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+    /* the rotated corners extend ~3.7px past the 18px slot on each side */
+    margin: 0 4px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--text-muted) 68%, var(--border));
+    clip-path: none;
+    transform: rotate(45deg);
+    background: var(--triangle-neutral);
+  }
+  .tree-label--branch .tree-input:checked + .tree-box,
+  .tree-label--branch .tree-input:indeterminate + .tree-box {
+    border-color: color-mix(in srgb, var(--text-muted) 68%, var(--border));
+    background: var(--triangle-neutral);
+  }
+  /* 0.5deg blends at the wedge seams antialias the conic hard stops */
+  .tree-label--branch .tree-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: conic-gradient(from -90deg,
+      var(--triangle-top) 0 calc(25% - 0.5deg),
+      var(--triangle-right) calc(25% + 0.5deg) calc(50% - 0.5deg),
+      var(--triangle-bottom) calc(50% + 0.5deg) calc(75% - 0.5deg),
+      var(--triangle-left) calc(75% + 0.5deg) calc(100% - 0.5deg),
+      var(--triangle-top) 100%);
+  }
+  .tree-label--branch .tree-box[data-readonly-state="partial"] { --triangle-left: var(--green); }
+  .tree-label--branch .tree-box[data-readonly-state="all"] {
+    --triangle-top: var(--green);
+    --triangle-left: var(--green);
+  }
+  .tree-label--branch .tree-box[data-mutable-state="partial"] { --triangle-right: var(--orange); }
+  .tree-label--branch .tree-box[data-mutable-state="all"] {
+    --triangle-right: var(--orange);
+    --triangle-bottom: var(--orange);
+  }
+  .tree-label--branch .tree-input:checked + .tree-box::after,
+  .tree-label--branch .tree-input:indeterminate + .tree-box::after { display: none; }
+  .tree-name { color: var(--text-muted); }
+  .tree-kind {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .tree-count {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    color: var(--text-muted);
+    font: 0.68rem/1.4 var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .tree-count-kind {
+    --kind-color: var(--text-muted);
+    min-width: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 7px;
+    color: color-mix(in srgb, var(--kind-color) 45%, var(--text-muted));
+  }
+  .tree-count-kind::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
+    border: 1px solid currentColor;
+    transform: rotate(45deg);
+  }
+  .tree-count-kind--readonly { --kind-color: var(--green); }
+  .tree-count-kind--mutable { --kind-color: var(--orange); }
+  .tree-count-kind.has-selection { color: var(--kind-color); }
+  .tree-branch-row {
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+  }
+  .tree-branch-row > .tree-label {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+  .tree-branch-row > .tree-count { margin-left: auto; }
+  .tree-branch-tools {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding-left: 10px;
+    margin-left: 10px;
+    border-left: 1px solid var(--border);
+  }
+  .tree-kind-toggle {
+    --kind-color: var(--text-muted);
+    position: relative;
+    width: 18px;
+    height: 18px;
+    border: 0;
+    color: color-mix(in srgb, var(--kind-color) 42%, var(--text-muted));
+    background: transparent;
+    font-size: 0;
+    cursor: pointer;
+    opacity: 0.72;
+    transition: color 0.15s, opacity 0.15s;
+  }
+  .tree-kind-toggle::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    width: 8px;
+    height: 8px;
+    border: 1.5px solid currentColor;
+    transform: rotate(45deg);
+  }
+  .tree-kind-toggle--readonly { --kind-color: var(--green); }
+  .tree-kind-toggle--mutable { --kind-color: var(--orange); }
+  .tree-kind-toggle[data-state="partial"],
+  .tree-kind-toggle[data-state="all"] {
+    color: var(--kind-color);
+    opacity: 1;
+  }
+  .tree-branch-row:hover .tree-kind-toggle { opacity: 1; }
+  .tree-kind-toggle:hover,
+  .tree-kind-toggle:focus-visible {
+    color: var(--kind-color);
+    opacity: 1;
+    outline: none;
+  }
+  .tree-kind-toggle:focus-visible::before {
+    outline: 2px solid var(--cyan);
+    outline-offset: 3px;
+  }
+  .tree-kind-toggle:disabled {
+    display: none;
+  }
+
+  @media (max-width: 620px) {
+    .checktree-head { align-items: flex-start; flex-wrap: wrap; }
+    .checktree-legend { margin-left: auto; }
+    .tree-list--root { min-width: 480px; }
   }
 
   /* ── form ── */
@@ -296,20 +749,26 @@
     text-transform: uppercase;
   }
 
-  .badge { background: var(--badge, var(--border)); color: var(--badge, var(--text-muted)); }
-  .badge::before { background: var(--surface); }
-  .badge--cyan   { --badge: var(--cyan); }
-  .badge--green  { --badge: var(--green); }
-  .badge--yellow { --badge: var(--yellow); }
-  .badge--red    { --badge: var(--red); }
-  .badge--purple { --badge: var(--purple); }
+  .badge--cyan   { background: var(--cyan);   color: var(--cyan); }
+  .badge--cyan::before   { background: var(--surface); }
+  .badge--green  { background: var(--green);  color: var(--green); }
+  .badge--green::before  { background: var(--surface); }
+  .badge--yellow { background: var(--yellow); color: var(--yellow); }
+  .badge--yellow::before { background: var(--surface); }
+  .badge--red    { background: var(--red);    color: var(--red); }
+  .badge--red::before    { background: var(--surface); }
+  .badge--purple { background: var(--purple); color: var(--purple); }
+  .badge--purple::before { background: var(--surface); }
 
   /* skeleton state while real status is being fetched */
   .badge--checking {
+    background: var(--border);
+    color: var(--text-muted);
     text-transform: none;
     letter-spacing: normal;
     font-weight: 500;
   }
+  .badge--checking::before { background: var(--surface); }
 
   .glyph-row {
     display: flex;
@@ -347,9 +806,9 @@
     font-weight: 700;
     color: var(--bg);
     cursor: default;
-    transition: transform 0.12s;
+    transition: filter 0.12s;
   }
-  .hchip:hover { transform: scale(1.25); }
+  .hchip:hover { filter: brightness(1.25); }
 
   .hchip--opencode { background: var(--cyan); }
   .hchip--claude   { background: #d97757; }
@@ -394,6 +853,7 @@
 
   /* connection dot: a 45°-rotated square, on language */
   .dot {
+    position: relative;
     width: 8px;
     height: 8px;
     display: inline-block;
@@ -401,14 +861,18 @@
     flex-shrink: 0;
   }
   .dot--live { background: var(--green); }
-  .dot--connecting {
-    background: var(--cyan);
-    box-shadow: 0 0 0 3px rgba(88,166,255,0.25);
+  .dot--connecting { background: var(--cyan); }
+  /* the ring pulses via transform/opacity so the animation stays off the paint path */
+  .dot--connecting::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 2px solid rgba(88,166,255,0.3);
     animation: dot-pulse 1.2s ease-in-out infinite;
   }
   .dot--down { background: var(--red); }
   @keyframes dot-pulse {
-    50% { box-shadow: 0 0 0 6px rgba(88,166,255,0.1); }
+    50% { transform: scale(1.8); opacity: 0.2; }
   }
 
   .dot-legend {
@@ -433,6 +897,7 @@
     padding: 9px 16px;
     font-family: inherit;
     font-size: 0.9rem;
+    font-weight: 500;
     background: none;
     border: none;
     color: var(--text-muted);
@@ -440,7 +905,10 @@
   }
   .tab:hover { color: var(--text); }
   .tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
-  .tab.active { color: var(--cyan); font-weight: 700; }
+  .tab.active {
+    color: var(--cyan);
+    text-shadow: 0.3px 0 currentColor, -0.3px 0 currentColor;
+  }
   /* trapezoid underline: 45° ends instead of a plain bar */
   .tab.active::after {
     content: '';
@@ -598,6 +1066,16 @@
   .wf-node--running {
     --accent: var(--orange);
     --node-border: rgba(210,153,34,0.55);
+  }
+  /* the pulse is an opacity-only tint overlay, cheaper than animating filter */
+  .wf-node--running::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: var(--orange);
+    opacity: 0;
+    pointer-events: none;
     animation: wf-pulse 2s ease-in-out infinite;
   }
   .wf-node--running .wf-ico { color: var(--orange); }
@@ -609,7 +1087,7 @@
   .wf-node--skipped .wf-ico { color: var(--text-muted); }
 
   @keyframes wf-pulse {
-    50% { filter: brightness(1.45); }
+    50% { opacity: 0.14; }
   }
 
   .wf-outcome-row {
@@ -627,11 +1105,12 @@
     font-size: 0.78rem;
     font-weight: 600;
   }
-  .wf-outcome { background: var(--outcome); color: var(--outcome); }
-  .wf-outcome::before { background: color-mix(in srgb, var(--outcome) 12%, var(--surface)); }
-  .wf-outcome--ok      { --outcome: var(--green); }
-  .wf-outcome--running { --outcome: var(--orange); }
-  .wf-outcome--fail    { --outcome: var(--red); }
+  .wf-outcome--ok { background: var(--green); color: var(--green); }
+  .wf-outcome--ok::before { background: color-mix(in srgb, var(--green) 12%, var(--surface)); }
+  .wf-outcome--running { background: var(--orange); color: var(--orange); }
+  .wf-outcome--running::before { background: color-mix(in srgb, var(--orange) 12%, var(--surface)); }
+  .wf-outcome--fail { background: var(--red); color: var(--red); }
+  .wf-outcome--fail::before { background: color-mix(in srgb, var(--red) 12%, var(--surface)); }
 
   .wf-gate {
     --cut: 2px;
@@ -738,8 +1217,10 @@
     --bw: 0px;
     overflow: auto;
     max-width: 100%;
+    height: 305px;
     padding: 10px;
     display: flex;
+    align-items: center;
     overscroll-behavior: contain;
     scrollbar-width: none;
     background:
@@ -753,7 +1234,8 @@
   .workflow-scroll::-webkit-scrollbar { display: none; }
   .workflow-scroll:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
 
-  .workflow-stage { position: relative; flex: 0 0 auto; margin: auto; }
+  .workflow-sizer { flex: 0 0 auto; margin: auto; }
+  .workflow-stage { position: relative; transform-origin: 0 0; }
 
   .workflow-edges {
     position: absolute;
@@ -867,18 +1349,67 @@
     font-size: 0.8rem;
     line-height: 1.65;
   }
-  .output::before { background: #0a0e14; }
+  .output::before { background: var(--surface-deep); }
   .output-scroll {
     max-height: 16rem;
-    overflow-y: auto;
+    overflow: auto;
     padding: 14px 18px;
+  }
+  .output-variant-label {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 7px 4px;
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .output-variant-label .output-zone {
+    color: #aeb6c2;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    overflow-wrap: anywhere;
+  }
+  .output-variant + .output-variant { margin-top: 16px; }
+  .output-grid { min-width: 560px; }
+  .output-head,
+  .line {
+    display: grid;
+    grid-template-columns: 108px 48px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+  .output-head {
+    position: sticky;
+    z-index: 2;
+    top: -14px;
+    padding: 3px 0 7px;
+    margin-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    background: var(--surface-deep);
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .output-zone {
+    white-space: normal;
   }
   .line { white-space: pre-wrap; }
   .line .at {
     color: var(--text-muted);
-    margin-right: 12px;
+    text-align: right;
     user-select: none;
   }
+  .line .at-wall { color: #8b949e; user-select: none; }
+  .line-msg { min-width: 0; }
+  .line--ok .at   { color: color-mix(in srgb, var(--green) 72%, var(--text-muted)); }
+  .line--warn .at { color: color-mix(in srgb, var(--yellow) 72%, var(--text-muted)); }
+  .line--err .at  { color: color-mix(in srgb, var(--red) 72%, var(--text-muted)); }
   .line--ok   { color: var(--green); }
   .line--warn { color: var(--yellow); }
   .line--err  { color: var(--red); }
@@ -887,7 +1418,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(1,4,9,0.72);
+    background: var(--overlay);
     display: none;
     align-items: center;
     justify-content: center;
@@ -895,15 +1426,13 @@
   }
   .overlay.open { display: flex; }
 
-  /* filter is applied before clip-path, so a drop-shadow on the chamfered box itself
-     is clipped away — the unclipped wrapper carries it */
-  .dialog-shadow { filter: drop-shadow(0 24px 48px rgba(0,0,0,0.55)); }
   .dialog {
     --cut: 16px;
     --bw: 1px;
     width: min(440px, 90vw);
     padding: 24px;
     background: var(--border);
+    filter: drop-shadow(0 24px 48px rgba(0,0,0,0.55));
   }
   .dialog::before { background: var(--surface); }
 
@@ -925,19 +1454,20 @@
     position: fixed;
     left: 50%;
     bottom: 28px;
-    transform: translate(-50%, 10px);
+    transform: translateX(-50%);
+    width: min(190px, calc(100vw - 32px));
     padding: 10px 22px;
+    text-align: center;
     font-size: 0.85rem;
     background: var(--border);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.25s, transform 0.25s;
+    transition: opacity 0.2s;
     z-index: 2000;
   }
-  .toast::before { background: #1c2128; }
+  .toast::before { background: var(--surface-raised); }
   .toast.show {
     opacity: 1;
-    transform: translate(-50%, 0);
   }
 
   /* ── tooltip ── */
@@ -946,38 +1476,400 @@
     --bw: 1px;
     position: fixed;
     z-index: 100;
-    max-width: 44ch;
+    max-width: calc(44ch + 30px);
     padding: 6px 12px;
     font-size: 0.75rem;
     line-height: 1.5;
     background: var(--border);
     pointer-events: none;
-    white-space: pre-line;
     display: none;
   }
-  .ui-tip::before { background: #1c2128; }
+  .ui-tip::before { background: var(--surface-raised); }
   .ui-tip.show { display: block; }
+  .ui-tip.show:not(.positioned) { visibility: hidden; }
+
+  .ui-tip-lines { display: grid; gap: 3px; white-space: pre-wrap; }
 
   .tip-target {
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    font: inherit;
     text-decoration: underline dotted var(--text-muted);
     text-underline-offset: 3px;
     cursor: help;
   }
+  .tip-target:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  .tooltip-sentence { font-size: 0.9rem; }
+
+  /* ── Dise migration component extensions ── */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .card--compact { padding: 16px; }
+  .card-heading { font-size: 1.05rem; font-weight: 600; }
+  .card-description { margin-top: 4px; color: var(--text-muted); font-size: 0.82rem; }
+  .card-header,
+  .panel-header,
+  .component-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-header { justify-content: space-between; margin-bottom: 16px; }
+  .card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .panel {
+    padding: 16px;
+    border: 1px solid var(--border);
+    background: var(--surface-deep);
+  }
+  .panel--dense { padding: 8px 12px; }
+  .panel + .panel { margin-top: 12px; }
+  .empty-state { padding: 28px 16px; color: var(--text-muted); text-align: center; }
+  .empty-state strong { display: block; margin-bottom: 4px; color: var(--text); }
+  .skeleton-stack { display: grid; gap: 10px; }
+  .skeleton-line {
+    position: relative;
+    height: 12px;
+    overflow: hidden;
+    background: var(--border);
+  }
+  .skeleton-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--surface-raised), transparent);
+    transform: translateX(-100%);
+    animation: skeleton-shift 1.4s linear infinite;
+  }
+  .skeleton-line--short { width: 58%; }
+  @keyframes skeleton-shift { to { transform: translateX(100%); } }
+
+  .btn--green { --btn-fill: rgba(63,185,80,0.18); background: var(--green); }
+  .btn--green::before { background: var(--surface); }
+  .btn--ghost { min-width: 0; padding-inline: 12px; background: transparent; color: var(--text-muted); }
+  .btn--ghost::before { background: transparent; }
+  .btn--ghost:hover { color: var(--text); }
+  .btn--small { min-width: 0; min-height: 32px; padding: 5px 12px; font-size: 0.78rem; }
+  .btn--icon { min-width: 36px; width: 36px; height: 36px; padding: 0; }
+  .btn[aria-busy="true"] { cursor: wait; }
+  .btn-spinner {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    margin-right: 8px;
+    border: 2px solid color-mix(in srgb, currentColor 28%, transparent);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .state-gallery { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 12px; }
+  .state-sample { padding: 12px; border: 1px solid var(--border); background: var(--surface-deep); }
+  .state-sample-label { margin-bottom: 8px; color: var(--text-muted); font-size: 0.67rem; text-transform: uppercase; letter-spacing: .06em; }
+  .focus-demo { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+  .field-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+  .field { min-width: 0; }
+  .field-label-row { display: flex; gap: 6px; align-items: baseline; margin-bottom: 6px; }
+  .field-label { font-size: 0.82rem; font-weight: 600; }
+  .field-optional { color: var(--text-muted); font-size: 0.7rem; }
+  .field-control {
+    --cut: 7px;
+    --bw: 1px;
+    display: flex;
+    align-items: center;
+    background: var(--border);
+  }
+  .field-control::before { background: var(--surface-deep); }
+  .field:focus-within .field-control { background: var(--cyan); }
+  .field-input {
+    width: 100%;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 0;
+    outline: 0;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+  }
+  .field-input::placeholder { color: var(--text-muted); }
+  .field-input:disabled { color: var(--text-muted); cursor: not-allowed; }
+  .field-input[readonly] { color: #aeb6c2; font-family: var(--font-mono); }
+  .field-action { width: 36px; height: 36px; border: 0; color: var(--text-muted); background: transparent; cursor: pointer; }
+  .field-action:hover,.field-action:focus-visible { color: var(--cyan); outline: 0; }
+  .field-hint,.field-message { min-height: 1.35em; margin-top: 5px; color: var(--text-muted); font-size: 0.72rem; }
+  .field--invalid .field-control { background: var(--red); }
+  .field--invalid .field-message { color: var(--red); }
+  .field--loading .field-message { color: var(--cyan); }
+
+  .native-select { appearance: none; padding-right: 38px; cursor: pointer; }
+  .select-caret { width: 0; height: 0; margin-right: 14px; border: 5px solid transparent; border-top-color: var(--text-muted); transform: translateY(3px); pointer-events: none; }
+  .listbox { position: relative; }
+  .listbox-trigger {
+    width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 12px; border: 1px solid var(--border); color: var(--text); background: var(--surface-deep);
+    font: inherit; text-align: left; cursor: pointer;
+  }
+  .listbox-trigger:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .listbox-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .listbox-menu {
+    --cut: 8px;
+    --bw: 1px;
+    position: fixed; z-index: 1200; display: none;
+    padding: var(--bw);
+    background: var(--border);
+    filter: drop-shadow(0 14px 36px var(--shadow));
+  }
+  .listbox-menu.open { display: block; }
+  .listbox-menu-scroll {
+    --inner: calc(var(--cut) - var(--bw) * 0.5858);
+    max-height: 230px;
+    overflow: auto;
+    overscroll-behavior: contain;
+    background: var(--surface-raised);
+  }
+  /* the edge facing the trigger stays square so the menu reads as attached;
+     the far corners carry the octagon cut */
+  .listbox-menu--down { clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut))); }
+  .listbox-menu--down .listbox-menu-scroll { clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--inner)), calc(100% - var(--inner)) 100%, var(--inner) 100%, 0 calc(100% - var(--inner))); }
+  .listbox-menu--up { clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%, 0 var(--cut)); }
+  .listbox-menu--up .listbox-menu-scroll { clip-path: polygon(var(--inner) 0, calc(100% - var(--inner)) 0, 100% var(--inner), 100% 100%, 0 100%, 0 var(--inner)); }
+  .listbox-option { padding: 9px 12px; color: var(--text-muted); cursor: pointer; }
+  .listbox-option[aria-selected="true"] { color: var(--text); background: color-mix(in srgb,var(--purple) 22%,var(--surface-raised)); }
+  .listbox-option.active { outline: 1px solid var(--cyan); outline-offset: -2px; color: var(--text); }
+  .listbox-option[aria-disabled="true"] { opacity: .42; cursor: not-allowed; }
+  .listbox-option-detail { display: block; margin-top: 2px; color: var(--text-muted); font: .68rem var(--font-mono); }
+
+  .permission-list { display: grid; gap: 6px; }
+  .permission-row {
+    --permission-color: var(--green);
+    --check-color: var(--permission-color);
+    position: relative;
+    display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 10px; align-items: start;
+    min-height: 44px; padding: 9px 10px; border-left: 2px solid var(--permission-color); background: var(--surface-deep); cursor: pointer;
+  }
+  .permission-row--mutable { --permission-color: var(--orange); }
+  .permission-row--locked { opacity: .72; cursor: not-allowed; }
+  .permission-row > .tree-box { margin-top: 1px; }
+  .permission-name { font-size: .82rem; font-weight: 600; }
+  .permission-detail { display: block; margin-top: 2px; color: var(--text-muted); font-size: .72rem; }
+  .permission-scope { color: var(--permission-color); font: .68rem var(--font-mono); }
+
+  .badge--orange { background: var(--orange); color: var(--orange); }
+  .badge--orange::before { background: var(--surface); }
+  .connection-status { display: inline-flex; min-width: 0; align-items: center; gap: 8px; color: var(--text-muted); font-size: .78rem; }
+  .connection-label { color: var(--text); }
+  .connection-detail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .callout {
+    --callout-color: var(--cyan); --cut: 8px; --bw: 1px;
+    padding: 13px 16px; background: var(--callout-color);
+  }
+  .callout::before { background: color-mix(in srgb,var(--callout-color) 7%,var(--surface-deep)); }
+  .callout--success { --callout-color: var(--green); }
+  .callout--warning { --callout-color: var(--yellow); }
+  .callout--error { --callout-color: var(--red); }
+  .callout--held { --callout-color: var(--orange); }
+  .callout--compact { padding: 9px 12px; }
+  .callout--compact .callout-title { font-size: .82rem; }
+  .callout--compact .callout-body { font-size: .72rem; }
+  .callout-title { color: var(--callout-color); font-weight: 700; }
+  .callout-body { margin-top: 3px; color: var(--text-muted); font-size: .8rem; }
+  .callout-reasons { margin: 6px 0 0 18px; }
+  #component-feedback > .callout + .callout,
+  #component-feedback > .callout + .state-gallery,
+  #component-feedback > .state-gallery + .callout { margin-top: 12px; }
+  .inline-message { min-height: 1.4em; color: var(--text-muted); font-size: .76rem; }
+  .inline-message--progress { color: var(--cyan); }
+  .inline-message--success { color: var(--green); }
+  .inline-message--warning { color: var(--yellow); }
+  .inline-message--error { color: var(--red); }
+
+  .metric-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border: 1px solid var(--border); background: var(--border); gap: 1px; }
+  .metric-grid--six { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .stat { min-width: 0; padding: 13px 14px; background: var(--surface-deep); }
+  .stat-label { color: var(--text-muted); font-size: .64rem; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; }
+  .stat-value { min-width: 7ch; margin-top: 4px; color: var(--text); font: 600 1rem var(--font-mono); font-variant-numeric: tabular-nums; }
+  .stat-meta { margin-top: 2px; color: var(--text-muted); font-size: .66rem; }
+  .stat--positive .stat-value { color: var(--green); }
+  .stat--warning .stat-value { color: var(--yellow); }
+  .value-pair { display: grid; grid-template-columns: minmax(0,1fr) repeat(2,minmax(110px,auto)); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+  .value-source,.value-channel { padding: 13px 14px; background: var(--surface-deep); }
+  .value-source-name { font-weight: 600; }
+  .value-meta { color: var(--text-muted); font-size: .68rem; }
+  .value-channel-label { display: block; color: var(--text-muted); font-size: .65rem; text-transform: uppercase; }
+  .value-reading { display: block; margin-top: 2px; font: 600 .95rem var(--font-mono); }
+  .value-channel--input .value-reading { color: var(--green); }
+  .value-channel--output .value-reading { color: var(--red); }
+  .value-pair--stale { border-color: var(--yellow); }
+
+  .copy-value-trigger { padding: 0; border: 0; border-bottom: 1px dotted var(--text-muted); color: var(--cyan); background: transparent; font: inherit; cursor: pointer; }
+  .copy-value-trigger:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  .copy-popover {
+    position: fixed; z-index: 1400; display: none; width: min(420px,calc(100vw - 24px));
+    padding: 12px; border: 1px solid var(--border); background: var(--surface-raised); box-shadow: 0 16px 40px var(--shadow);
+  }
+  .copy-popover.open { display: block; }
+  .copy-popover-title { margin-bottom: 6px; font-size: .72rem; font-weight: 600; }
+  .copy-popover-value { display: grid; max-height: 12em; overflow: auto; overflow-wrap: anywhere; color: var(--text-muted); font: .72rem/1.5 var(--font-mono); user-select: text; }
+  .copy-popover-line { display: grid; grid-template-columns: minmax(0,1fr) 32px; gap: 8px; align-items: center; min-height: 34px; border-top: 1px solid var(--border); }
+  .copy-popover-line:first-child { border-top: 0; }
+  .copy-popover-line-label { color: var(--text); }
+  .copy-line-button {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    color: color-mix(in srgb,var(--text-muted) 62%,transparent);
+    background: transparent;
+    cursor: pointer;
+  }
+  .copy-line-button::before,
+  .copy-line-button::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 13px;
+    border: 1px solid currentColor;
+    clip-path: polygon(3px 0,100% 0,100% 100%,0 100%,0 3px);
+  }
+  .copy-line-button::before { left: 8px; top: 7px; }
+  .copy-line-button::after { left: 12px; top: 11px; background: var(--surface-raised); }
+  .copy-line-button:hover,
+  .copy-line-button:focus-visible { color: var(--cyan); outline: 0; }
+  .copy-line-button:focus-visible::after { outline: 2px solid var(--cyan); outline-offset: 3px; }
+  .copy-popover-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
+  .copy-feedback { color: var(--green); font-size: .7rem; }
+  .copy-popover-copy { flex: 0 0 auto; }
+
+  .data-table-viewport { overflow: auto; border: 1px solid var(--border); }
+  .data-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: .76rem; }
+  .data-table--dense td { padding-block: 7px; }
+  .data-table th { position: sticky; top: 0; z-index: 1; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-muted); background: var(--surface-deep); font-size: .64rem; letter-spacing: .06em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+  .data-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .data-table .numeric { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .data-table tbody tr:hover { background: rgba(255,255,255,.025); }
+  .data-table tr.row--current { box-shadow: inset 3px 0 var(--cyan); }
+  .data-table tr.row--running { background: color-mix(in srgb,var(--purple) 8%,transparent); }
+  .data-table tr.row--failed { background: color-mix(in srgb,var(--red) 6%,transparent); }
+  .table-state-cell { padding: 22px !important; color: var(--text-muted); text-align: center; }
+  .progressive-reveal { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
+  .progressive-reveal + .state-gallery { margin-top: 12px; }
+
+  .event-log { border: 1px solid var(--border); background: var(--surface-deep); }
+  .event-row { border-bottom: 1px solid var(--border); }
+  .event-row:last-child { border-bottom: 0; }
+  .event-summary { display: grid; grid-template-columns: 76px 58px 58px 90px minmax(0,1fr) 16px; gap: 8px; align-items: center; padding: 9px 11px; list-style: none; cursor: pointer; font-size: .73rem; }
+  .event-summary::-webkit-details-marker { display: none; }
+  .event-summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+  .event-time,.event-age,.event-gap { color: var(--text-muted); font-family: var(--font-mono); }
+  .event-type { font-weight: 600; }
+  .event-type--success { color: var(--green); }
+  .event-type--warning { color: var(--yellow); }
+  .event-type--error { color: var(--red); }
+  .event-type--pipeline { color: var(--purple); }
+  .event-caret { color: var(--text-muted); transition: transform .15s; }
+  .event-row[open] .event-caret { transform: rotate(90deg); }
+  .event-detail { padding: 0 12px 12px; }
+  .event-json { padding: 10px; overflow: auto; color: #aeb6c2; background: var(--bg); font: .7rem/1.45 var(--font-mono); white-space: pre-wrap; }
+
+  .code-block { border: 1px solid var(--border); background: var(--surface-deep); }
+  .code-block-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: .68rem; }
+  .code-block-body { max-height: 180px; overflow: auto; padding: 12px; color: #aeb6c2; font: .72rem/1.55 var(--font-mono); white-space: pre; }
+  .code-block--wrap .code-block-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .secret-value { padding: 12px; border: 1px solid var(--border); background: var(--surface-deep); }
+  .secret-value > .component-row { min-height: 34px; }
+  .secret-toggle { width: 82px; }
+  .secret-text { min-height: 1.5em; margin-top: 12px; overflow-wrap: anywhere; font: .72rem/1.5 var(--font-mono); }
+  .secret-warning { margin-top: 8px; color: var(--yellow); font-size: .7rem; }
+
+  .plot-shell { border: 1px solid var(--border); background: var(--surface-deep); }
+  .plot-canvas { width: 100%; height: 240px; display: block; outline: 0; }
+  .plot-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--cyan); }
+  .plot-summary { display: flex; flex-wrap: wrap; gap: 14px; padding: 9px 12px; border-top: 1px solid var(--border); color: var(--text-muted); font: .72rem var(--font-mono); }
+  .plot-summary strong { color: var(--text); }
+  .plot-legend { display: flex; gap: 14px; margin-bottom: 8px; color: var(--text-muted); font-size: .7rem; }
+  .plot-key { display: inline-flex; align-items: center; gap: 5px; }
+  .plot-key::before { content: ''; width: 12px; border-top: 2px solid var(--plot-color); }
+  .plot-key--input { --plot-color: var(--green); }
+  .plot-key--output { --plot-color: var(--red); }
+  .plot-key--live { --plot-color: var(--cyan); }
+  .plot-empty { display: grid; min-height: 180px; place-items: center; color: var(--text-muted); }
+
+  .app-shell-demo { border: 1px solid var(--border); background: var(--surface-deep); }
+  .app-shell-status,.app-shell-stream,.app-shell-tabs,.app-shell-subrow { min-height: 40px; display: flex; align-items: center; gap: 12px; padding: 7px 12px; border-bottom: 1px solid var(--border); }
+  .app-shell-status { justify-content: space-between; background: var(--surface-raised); }
+  .app-shell-stream { justify-content: center; font: .72rem var(--font-mono); }
+  .app-shell-tabs { overflow-x: auto; }
+  .app-shell-tab { flex: 0 0 auto; padding: 6px 10px; border: 0; color: var(--text-muted); background: transparent; font: inherit; cursor: pointer; }
+  .app-shell-tab[aria-selected="true"] { color: var(--cyan); box-shadow: inset 0 -2px var(--cyan); }
+  .app-shell-tab:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+  .app-shell-panel[hidden] { display: none; }
+  .app-shell-subrow { overflow-x: auto; color: var(--text-muted); font-size: .72rem; }
+  .app-shell-main { padding: 18px; }
+  .app-shell-demo > .callout--compact { margin: 12px 12px 0; }
+
+  .state-matrix { width: 100%; border-collapse: collapse; font-size: .72rem; }
+  .state-matrix th,.state-matrix td { padding: 8px 9px; border: 1px solid var(--border); text-align: left; }
+  .state-matrix th { color: var(--text-muted); background: var(--surface-deep); }
+  .state-chip { color: var(--text-muted); }
+  .state-chip--loading { color: var(--cyan); }
+  .state-chip--error { color: var(--red); }
+  .state-chip--stale { color: var(--yellow); }
+
+  .dialog--medium { width: min(620px,92vw); }
+  .dialog--large { width: min(820px,94vw); }
+  .dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+  .dialog-scroll { max-height: min(62vh,560px); overflow: auto; }
+  body.dialog-open { overflow: hidden; }
+  .dialog-state-grid { display: grid; gap: 10px; }
+
+  @media (max-width: 720px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .metric-grid,.metric-grid--six { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .value-pair { grid-template-columns: 1fr 1fr; }
+    .value-source { grid-column: 1 / -1; }
+    .event-summary { grid-template-columns: 70px 52px 1fr 16px; }
+    .event-gap,.event-type { grid-row: 2; }
+    .event-summary-text { grid-column: 3; }
+    .event-detail { padding-left: 12px; }
+  }
+  @media (max-width: 520px) {
+    body { padding: 24px 14px; }
+    .card { padding: 18px; }
+    .metric-grid,.metric-grid--six { grid-template-columns: 1fr; }
+    .dialog-actions { flex-direction: column-reverse; }
+    .dialog-actions .btn { width: 100%; }
+    .permission-row { grid-template-columns: 20px minmax(0,1fr); }
+    .permission-scope { grid-column: 2; }
+    .state-gallery { grid-template-columns: 1fr; }
+  }
 
   /* ── motion ── */
   @media (prefers-reduced-motion: reduce) {
-    .wf-node--running, .dot--connecting, .wf-flash { animation: none; }
-    .btn, .toast, .proc-caret, .hchip, .seg-opt { transition: none; }
+    html { scroll-behavior: auto; }
+    .wf-node--running::after, .dot--connecting::after, .wf-flash, .skeleton-line::after, .btn-spinner { animation: none; }
+    .btn, .toast, .proc-caret, .hchip, .seg-opt, .event-caret { transition: none; }
   }
 </style>
 </head>
 <body>
 
-  <h1>test ui demo</h1>
-  <p class="subtitle">this is a small sub-heading</p>
+  <h1>PRN UI component system</h1>
+  <p class="subtitle">A self-contained operational interface specimen for the complete Dise migration.</p>
 
   <!-- Buttons -->
-  <div class="chamfer card card--accent-left accent-cyan">
+  <div class="chamfer card card--accent-left accent-cyan" data-section-ref="01">
     <p class="section-label">Buttons: Active, Disabled</p>
     <div class="btn-row">
       <button class="chamfer btn btn--cyan"><span>Active</span></button>
@@ -998,18 +1890,402 @@
   </div>
 
   <!-- Segmented control -->
-  <div class="chamfer card card--accent-left accent-purple">
+  <div class="chamfer card card--accent-left accent-purple" id="component-tabs" data-component="Tabs SegmentedControl" data-section-ref="02">
     <p class="section-label">Segmented control</p>
     <div class="chamfer seg" role="radiogroup" aria-label="Runtime">
-      <button class="seg-opt active" type="button" role="radio" aria-checked="true">Docker</button>
-      <button class="seg-opt" type="button" role="radio" aria-checked="false">Podman</button>
-      <button class="seg-opt" type="button" role="radio" aria-checked="false">Local</button>
+      <button class="seg-opt active" type="button">Docker</button>
+      <button class="seg-opt" type="button">Podman</button>
+      <button class="seg-opt" type="button">Local</button>
     </div>
     <p class="demo-note">Click an option — the group keeps its chamfered outline, only the fill moves.</p>
   </div>
 
+  <!-- Scrollable segmented rail -->
+  <div class="chamfer card card--accent-left accent-purple" data-component="ScopeSwitcher" data-section-ref="03">
+    <p class="section-label">Scrollable segmented control</p>
+    <div class="scrollseg scrollseg-example" data-scrollseg role="radiogroup" aria-label="Workspace view">
+      <div class="scrollseg-head">
+        <span class="scrollseg-summary">Choose a view · pin frequently used options</span>
+        <span class="scrollseg-pinned-count" aria-live="polite">0 pinned</span>
+      </div>
+      <div class="scrollseg-viewport">
+        <div class="scrollseg-scroll" tabindex="0">
+          <div class="scrollseg-track">
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option active">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="true">
+                  <span class="scrollseg-kicker">Workspace</span>
+                  <span class="scrollseg-title">Overview</span>
+                  <span class="scrollseg-detail">status and activity</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Overview" aria-pressed="false" title="Pin Overview"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--mono">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Contract</span>
+                  <span class="scrollseg-title">api/openapi.yaml</span>
+                  <span class="scrollseg-detail">v3 · 42 routes</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin API contracts" aria-pressed="false" title="Pin API contracts"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Validation</span>
+                  <span class="scrollseg-title">Quality gates</span>
+                  <span class="scrollseg-detail">tests · lint · types</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Quality gates" aria-pressed="false" title="Pin Quality gates"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--editorial">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Agents</span>
+                  <span class="scrollseg-title">Review fleet</span>
+                  <span class="scrollseg-detail">8 reports ready</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Review fleet" aria-pressed="false" title="Pin Review fleet"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Environment</span>
+                  <span class="scrollseg-title">Deploy preview</span>
+                  <span class="scrollseg-detail mono">pr-184.acme.dev</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Deploy preview" aria-pressed="false" title="Pin Deploy preview"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--mono">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Build</span>
+                  <span class="scrollseg-title">artifacts/</span>
+                  <span class="scrollseg-detail">14 files · 86.2 MB</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Artifacts" aria-pressed="false" title="Pin Artifacts"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--mono">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Output</span>
+                  <span class="scrollseg-title">Live logs</span>
+                  <span class="scrollseg-detail">stdout + stderr</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Live logs" aria-pressed="false" title="Pin Live logs"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">History</span>
+                  <span class="scrollseg-title">Timeline</span>
+                  <span class="scrollseg-detail">events and transitions</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Timeline" aria-pressed="false" title="Pin Timeline"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Audit</span>
+                  <span class="scrollseg-title">Security findings</span>
+                  <span class="scrollseg-detail">2 medium · 7 low</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Security findings" aria-pressed="false" title="Pin Security findings"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--editorial">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Delivery</span>
+                  <span class="scrollseg-title">Release notes</span>
+                  <span class="scrollseg-detail">draft · 12 changes</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Release notes" aria-pressed="false" title="Pin Release notes"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="demo-note">Pinned options move to the start of the same scrolling list. Unpinning restores their native order.</p>
+
+    <div class="scrollseg scrollseg-example" data-scrollseg role="radiogroup" aria-label="Runtime detail view">
+      <div class="scrollseg-head">
+        <span class="scrollseg-summary">Short rail · all options fit</span>
+        <span class="scrollseg-pinned-count" aria-live="polite">Checking width…</span>
+      </div>
+      <div class="scrollseg-viewport">
+        <div class="scrollseg-scroll" tabindex="0">
+          <div class="scrollseg-track">
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option active">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="true">
+                  <span class="scrollseg-kicker">Container</span>
+                  <span class="scrollseg-title">Docker Engine</span>
+                  <span class="scrollseg-detail mono">unix:///var/run/docker.sock</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Docker Engine" aria-pressed="false" title="Pin Docker Engine"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--mono">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Container</span>
+                  <span class="scrollseg-title">podman machine</span>
+                  <span class="scrollseg-detail">rootless · arm64</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Podman machine" aria-pressed="false" title="Pin Podman machine"></button>
+              </div>
+            </div>
+            <div class="scrollseg-slot">
+              <div class="chamfer scrollseg-option scrollseg-option--editorial">
+                <button class="scrollseg-select" type="button" role="radio" aria-checked="false">
+                  <span class="scrollseg-kicker">Host</span>
+                  <span class="scrollseg-title">Local process</span>
+                  <span class="scrollseg-detail">current user · inherited env</span>
+                </button>
+                <button class="scrollseg-pin" type="button" aria-label="Pin Local process" aria-pressed="false" title="Pin Local process"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="demo-note">When every option fits, pinning has no benefit, so pin controls become unavailable automatically.</p>
+  </div>
+
+  <!-- Hierarchical checkboxes -->
+  <div class="chamfer card card--accent-left accent-green" id="component-checkbox" data-component="Checkbox PermissionChecklist" data-section-ref="04">
+    <p class="section-label">Hierarchical checkboxes</p>
+    <div class="chamfer checktree" data-checktree>
+      <div class="checktree-head">
+        <span class="checktree-title">Organization role</span>
+        <span class="checktree-legend" aria-label="Access types and their wedge positions">
+          <span><i class="checktree-key checktree-key--readonly"></i>read-only · left/top wedges</span>
+          <span><i class="checktree-key checktree-key--mutable"></i>mutable · right/bottom wedges</span>
+        </span>
+      </div>
+
+      <div class="checktree-scroll" tabindex="0" aria-label="Permission tree; scrolls horizontally when narrow">
+      <ul class="tree-list tree-list--root">
+        <li class="tree-branch">
+          <label class="tree-label tree-label--branch">
+            <input class="tree-input tree-parent" type="checkbox">
+            <span class="tree-box" aria-hidden="true"></span>
+            <span class="tree-name">Organization</span>
+            <span class="tree-count">0 / 0</span>
+          </label>
+          <ul class="tree-list">
+            <li class="tree-branch">
+              <label class="tree-label tree-label--branch">
+                <input class="tree-input tree-parent" type="checkbox">
+                <span class="tree-box" aria-hidden="true"></span>
+                <span class="tree-name">Projects</span>
+                <span class="tree-count">0 / 0</span>
+              </label>
+              <ul class="tree-list">
+                <li class="tree-branch">
+                  <label class="tree-label tree-label--branch">
+                    <input class="tree-input tree-parent" type="checkbox">
+                    <span class="tree-box" aria-hidden="true"></span>
+                    <span class="tree-name">Repository</span>
+                    <span class="tree-count">0 / 0</span>
+                  </label>
+                  <ul class="tree-list">
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--readonly">
+                        <input class="tree-input" type="checkbox" data-kind="readonly" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">View source</span>
+                        <span class="tree-kind">read-only</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Push commits</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable">
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Manage branches</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                  </ul>
+                </li>
+                <li class="tree-branch">
+                  <label class="tree-label tree-label--branch">
+                    <input class="tree-input tree-parent" type="checkbox">
+                    <span class="tree-box" aria-hidden="true"></span>
+                    <span class="tree-name">Pull requests</span>
+                    <span class="tree-count">0 / 0</span>
+                  </label>
+                  <ul class="tree-list">
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--readonly">
+                        <input class="tree-input" type="checkbox" data-kind="readonly">
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">View pull requests</span>
+                        <span class="tree-kind">read-only</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Review changes</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Merge pull requests</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="tree-branch">
+              <label class="tree-label tree-label--branch">
+                <input class="tree-input tree-parent" type="checkbox">
+                <span class="tree-box" aria-hidden="true"></span>
+                <span class="tree-name">Operations</span>
+                <span class="tree-count">0 / 0</span>
+              </label>
+              <ul class="tree-list">
+                <li class="tree-branch">
+                  <label class="tree-label tree-label--branch">
+                    <input class="tree-input tree-parent" type="checkbox">
+                    <span class="tree-box" aria-hidden="true"></span>
+                    <span class="tree-name">Deployments</span>
+                    <span class="tree-count">0 / 0</span>
+                  </label>
+                  <ul class="tree-list">
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--readonly">
+                        <input class="tree-input" type="checkbox" data-kind="readonly" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">View deployments</span>
+                        <span class="tree-kind">read-only</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable">
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Start deployment</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable">
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Cancel deployment</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                  </ul>
+                </li>
+                <li class="tree-branch">
+                  <label class="tree-label tree-label--branch">
+                    <input class="tree-input tree-parent" type="checkbox">
+                    <span class="tree-box" aria-hidden="true"></span>
+                    <span class="tree-name">Audit log</span>
+                    <span class="tree-count">0 / 0</span>
+                  </label>
+                  <ul class="tree-list">
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--readonly">
+                        <input class="tree-input" type="checkbox" data-kind="readonly" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">View audit log</span>
+                        <span class="tree-kind">read-only</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--readonly">
+                        <input class="tree-input" type="checkbox" data-kind="readonly">
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Export audit log</span>
+                        <span class="tree-kind">read-only</span>
+                      </label>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li class="tree-branch">
+              <label class="tree-label tree-label--branch">
+                <input class="tree-input tree-parent" type="checkbox">
+                <span class="tree-box" aria-hidden="true"></span>
+                <span class="tree-name">Administration</span>
+                <span class="tree-count">0 / 0</span>
+              </label>
+              <ul class="tree-list">
+                <li class="tree-branch">
+                  <label class="tree-label tree-label--branch">
+                    <input class="tree-input tree-parent" type="checkbox">
+                    <span class="tree-box" aria-hidden="true"></span>
+                    <span class="tree-name">Members</span>
+                    <span class="tree-count">0 / 0</span>
+                  </label>
+                  <ul class="tree-list">
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--readonly">
+                        <input class="tree-input" type="checkbox" data-kind="readonly" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">View members</span>
+                        <span class="tree-kind">read-only</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable" checked>
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Invite members</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                    <li class="tree-leaf">
+                      <label class="tree-label tree-label--mutable">
+                        <input class="tree-input" type="checkbox" data-kind="mutable">
+                        <span class="tree-box" aria-hidden="true"></span>
+                        <span class="tree-name">Remove members</span>
+                        <span class="tree-kind">mutable</span>
+                      </label>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+      </div>
+    </div>
+    <p class="demo-note">Branch diamonds use interior wedges: left is partial read-only and top joins it for all; right is partial mutable and bottom joins it for all. Hovering a branch row shows the same summary as text.</p>
+  </div>
+
   <!-- Form -->
-  <div class="chamfer card card--accent-left accent-green">
+  <div class="chamfer card card--accent-left accent-green" data-section-ref="05">
     <p class="section-label">Form</p>
     <p class="form-title">Title</p>
     <div class="chamfer input-wrap">
@@ -1018,7 +2294,7 @@
   </div>
 
   <!-- Status system -->
-  <div class="chamfer card card--accent-top accent-magenta">
+  <div class="chamfer card card--accent-top accent-magenta" data-section-ref="06">
     <p class="section-label">Status system: badges &amp; glyphs</p>
     <div class="badge-row">
       <span class="chamfer badge badge--cyan"><span>Running</span></span>
@@ -1039,21 +2315,21 @@
   </div>
 
   <!-- Harness chips -->
-  <div class="chamfer card card--accent-left accent-yellow">
+  <div class="chamfer card card--accent-left accent-yellow" data-section-ref="07">
     <p class="section-label">Harness chips</p>
     <div class="hchip-row">
-      <span class="chamfer hchip hchip--opencode" data-tip="opencode · running for 2m 18s">O</span>
-      <span class="chamfer hchip hchip--claude" data-tip="claude · running for 1m 02s">C</span>
-      <span class="chamfer hchip hchip--codex" data-tip="codex · running for 44s">X</span>
-      <span class="chamfer hchip hchip--grok hchip--done" data-tip="grok · finished">G</span>
-      <span class="chamfer hchip hchip--cursor hchip--done" data-tip="cursor · finished">U</span>
-      <span class="chamfer hchip hchip--overflow" data-tip="3 more procs">+3</span>
+      <span class="chamfer hchip hchip--opencode" tabindex="0" data-tooltip="opencode · running for 2m 18s">O</span>
+      <span class="chamfer hchip hchip--claude" tabindex="0" data-tooltip="claude · running for 1m 02s">C</span>
+      <span class="chamfer hchip hchip--codex" tabindex="0" data-tooltip="codex · running for 44s">X</span>
+      <span class="chamfer hchip hchip--grok hchip--done" tabindex="0" data-tooltip="grok · finished">G</span>
+      <span class="chamfer hchip hchip--cursor hchip--done" tabindex="0" data-tooltip="cursor · finished">U</span>
+      <span class="chamfer hchip hchip--overflow" tabindex="0" data-tooltip="3 more procs">+3</span>
     </div>
     <p class="demo-note">One letter per harness; finished chips dim. Hover for details.</p>
   </div>
 
   <!-- Chrome: status bar, breadcrumbs, tabs -->
-  <div class="chamfer card card--accent-left accent-cyan">
+  <div class="chamfer card card--accent-left accent-cyan" data-section-ref="08">
     <p class="section-label">Chrome: status bar, breadcrumbs, tabs</p>
     <div class="chamfer statusbar">
       <nav class="crumbs" aria-label="Breadcrumbs">
@@ -1064,12 +2340,12 @@
       </div>
     </div>
     <div class="tabs" role="tablist" aria-label="Pages">
-      <button class="tab active" role="tab" aria-selected="true" aria-controls="tabPanelDemo" data-tab="run">Run</button>
-      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelDemo" data-tab="jobs">Jobs</button>
-      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelDemo" data-tab="projects">Projects</button>
-      <button class="tab" role="tab" aria-selected="false" aria-controls="tabPanelDemo" data-tab="setup">Setup</button>
+      <button class="tab active" role="tab" aria-selected="true" data-tab="run">Run</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="jobs">Jobs</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="projects">Projects</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="setup">Setup</button>
     </div>
-    <p class="tab-panel-demo" id="tabPanelDemo" role="tabpanel">Pick a repo and launch a harness.</p>
+    <p class="tab-panel-demo" id="tabPanelDemo">Pick a repo and launch a harness.</p>
     <div class="dot-legend">
       <span><span class="dot dot--live"></span> live</span>
       <span><span class="dot dot--connecting"></span> connecting</span>
@@ -1078,7 +2354,7 @@
   </div>
 
   <!-- Table -->
-  <div class="chamfer card card--accent-left accent-green">
+  <div class="chamfer card card--accent-left accent-green" data-section-ref="09">
     <p class="section-label">Jobs table</p>
     <div class="table-scroll">
       <table class="table">
@@ -1134,7 +2410,7 @@
   </div>
 
   <!-- Collapsible status rows -->
-  <div class="chamfer card card--accent-left accent-orange">
+  <div class="chamfer card card--accent-left accent-orange" data-section-ref="10">
     <p class="section-label">Collapsible status rows</p>
 
     <details class="chamfer proc proc--running" open>
@@ -1189,7 +2465,7 @@
   </div>
 
   <!-- Workflow nodes -->
-  <div class="chamfer card card--accent-left accent-magenta">
+  <div class="chamfer card card--accent-left accent-magenta" data-section-ref="11">
     <p class="section-label">Workflow nodes</p>
     <div class="wf-row">
       <div class="chamfer wf-node wf-node--done">
@@ -1240,7 +2516,7 @@
   </div>
 
   <!-- Workflow diagram -->
-  <div class="chamfer card card--accent-left accent-magenta">
+  <div class="chamfer card card--accent-left accent-magenta" data-section-ref="12">
     <p class="section-label">Workflow diagram</p>
     <div class="wf-diagram-head">
       <span class="chamfer wf-outcome wf-outcome--running"><span>Job running</span></span>
@@ -1264,6 +2540,7 @@
         <li><span class="glyph glyph--waiting">○</span> waiting</li>
       </ul>
       <div class="chamfer workflow-scroll" role="region" aria-label="Job dependency graph" tabindex="0">
+        <div class="workflow-sizer">
         <div class="workflow-stage" id="wfStage" style="width:1070px;height:285px">
           <svg class="workflow-edges" id="wfEdges" width="1070" height="285" viewBox="0 0 1070 285" aria-hidden="true">
             <defs>
@@ -1299,12 +2576,13 @@
           </div>
           <div class="chamfer wf-bookend" style="left:1010px;top:117px" id="wfFinish" aria-hidden="true"><span class="wf-finish-flag"></span></div>
         </div>
+        </div>
       </div>
     </div>
   </div>
 
   <!-- Banners -->
-  <div class="chamfer card card--accent-left accent-red">
+  <div class="chamfer card card--accent-left accent-red" data-section-ref="13">
     <p class="section-label">Banners</p>
     <div class="chamfer banner banner--danger">
       <p class="banner-title">Cannot run in this repo</p>
@@ -1319,22 +2597,227 @@
   </div>
 
   <!-- Log output -->
-  <div class="chamfer card card--accent-left accent-purple">
+  <div class="chamfer card card--accent-left accent-purple" data-section-ref="14">
     <p class="section-label">Log output</p>
-    <div class="chamfer output">
-      <div class="output-scroll">
-        <div class="line"><span class="at">+0.0s</span>❯ cargo test --workspace</div>
-        <div class="line"><span class="at">+1.2s</span>Compiling scsh v0.4.4</div>
-        <div class="line"><span class="at">+6.4s</span>Finished test profile in 5.2s</div>
-        <div class="line line--ok"><span class="at">+8.7s</span>✓ 214 tests passed</div>
-        <div class="line line--warn"><span class="at">+8.9s</span>warning: unused variable `cast_id`</div>
-        <div class="line line--err"><span class="at">+9.0s</span>✗ e2e::daemon_restart — assertion failed</div>
+    <div class="output-variant">
+      <p class="output-variant-label">Short time-zone name · <span class="output-zone" data-zone-style="short">Time zone</span></p>
+      <div class="chamfer output">
+        <div class="output-scroll">
+          <div class="output-grid">
+            <div class="output-head" aria-hidden="true">
+              <span>Time</span>
+              <span title="Elapsed time">Δt</span>
+              <span>Message</span>
+            </div>
+            <div class="line"><time class="at-wall" datetime="2026-08-01T08:41:03.120Z"></time><span class="at"></span><span class="line-msg">❯ cargo test --workspace</span></div>
+            <div class="line"><time class="at-wall" datetime="2026-08-01T08:41:04.320Z"></time><span class="at">+1.2s</span><span class="line-msg">Compiling scsh v0.4.4</span></div>
+            <div class="line"><time class="at-wall" datetime="2026-08-01T08:41:09.520Z"></time><span class="at">+6.4s</span><span class="line-msg">Finished test profile in 5.2s</span></div>
+            <div class="line line--ok"><time class="at-wall" datetime="2026-08-01T08:41:11.820Z"></time><span class="at">+8.7s</span><span class="line-msg">✓ 214 tests passed</span></div>
+            <div class="line line--warn"><time class="at-wall" datetime="2026-08-01T08:41:12.020Z"></time><span class="at">+8.9s</span><span class="line-msg">warning: unused variable `cast_id`</span></div>
+            <div class="line line--err"><time class="at-wall" datetime="2026-08-01T08:41:12.120Z"></time><span class="at">+9.0s</span><span class="line-msg">✗ e2e::daemon_restart — assertion failed</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="output-variant" data-time-zone="America/Argentina/Buenos_Aires">
+      <p class="output-variant-label">Long time-zone name · <span class="output-zone" data-zone-style="long">Time zone</span></p>
+      <div class="chamfer output">
+        <div class="output-scroll">
+          <div class="output-grid">
+            <div class="output-head" aria-hidden="true">
+              <span>Time</span>
+              <span title="Elapsed time">Δt</span>
+              <span>Message</span>
+            </div>
+            <div class="line"><time class="at-wall" datetime="2026-08-01T08:41:03.120Z"></time><span class="at"></span><span class="line-msg">❯ cargo test --workspace</span></div>
+            <div class="line"><time class="at-wall" datetime="2026-08-01T08:41:04.320Z"></time><span class="at">+1.2s</span><span class="line-msg">Compiling scsh v0.4.4</span></div>
+            <div class="line"><time class="at-wall" datetime="2026-08-01T08:41:09.520Z"></time><span class="at">+6.4s</span><span class="line-msg">Finished test profile in 5.2s</span></div>
+            <div class="line line--ok"><time class="at-wall" datetime="2026-08-01T08:41:11.820Z"></time><span class="at">+8.7s</span><span class="line-msg">✓ 214 tests passed</span></div>
+            <div class="line line--warn"><time class="at-wall" datetime="2026-08-01T08:41:12.020Z"></time><span class="at">+8.9s</span><span class="line-msg">warning: unused variable `cast_id`</span></div>
+            <div class="line line--err"><time class="at-wall" datetime="2026-08-01T08:41:12.120Z"></time><span class="at">+9.0s</span><span class="line-msg">✗ e2e::daemon_restart — assertion failed</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- Dise migration: Cards and panels -->
+  <section class="chamfer card card--accent-left accent-cyan" id="component-card" data-component="Card Panel" data-section-ref="15">
+    <p class="section-label">Card &amp; Panel</p>
+    <div class="card-header">
+      <div><h2 class="card-heading">Composable surfaces</h2><p class="card-description">Normal, compact, dense, empty, and loading compositions.</p></div>
+      <span class="chamfer badge badge--cyan"><span>Foundation</span></span>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><strong>Normal panel</strong><span class="connection-status"><span class="dot dot--live"></span><span>ready</span></span></div>
+      <p class="demo-note">Nested content uses shared borders and the named deep surface.</p>
+    </div>
+    <div class="panel panel--dense">
+      <div class="table-scroll"><table class="table"><thead><tr><th>Engine</th><th>Mode</th><th>Status</th></tr></thead><tbody><tr><td class="mono">demo-engine-a</td><td>observe</td><td><span class="chamfer badge badge--green"><span>Active</span></span></td></tr></tbody></table></div>
+    </div>
+    <div class="field-grid">
+      <div class="panel empty-state"><strong>No saved views</strong><span>Create a view when a reusable layout is useful.</span></div>
+      <div class="panel" aria-busy="true" aria-label="Loading card"><div class="skeleton-stack"><span class="skeleton-line skeleton-line--short"></span><span class="skeleton-line"></span><span class="skeleton-line"></span></div></div>
+    </div>
+  </section>
+
+  <!-- Dise migration: Buttons -->
+  <section class="chamfer card card--accent-left accent-cyan" id="component-button" data-component="Button" data-section-ref="16">
+    <p class="section-label">Button contract</p>
+    <div class="state-gallery">
+      <div class="state-sample"><p class="state-sample-label">Primary</p><button class="chamfer btn btn--cyan" type="button"><span>Load more</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Positive</p><button class="chamfer btn btn--green" type="button"><span>Approve</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Warning</p><button class="chamfer btn btn--orange" type="button"><span>Revoke</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Danger</p><button class="chamfer btn btn--red" type="button"><span>Force stop</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Special</p><button class="chamfer btn btn--purple" type="button"><span>Generate token</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Secondary</p><button class="chamfer btn btn--muted" type="button"><span>Cancel</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Ghost / small</p><button class="btn btn--ghost btn--small" type="button"><span>Dismiss</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Disabled</p><button class="chamfer btn btn--disabled" type="button" disabled><span>Unavailable</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Loading</p><button class="chamfer btn btn--cyan" type="button" disabled aria-busy="true"><span><i class="btn-spinner"></i>Copying</span></button></div>
+      <div class="state-sample"><p class="state-sample-label">Icon navigation</p><div class="component-row"><button class="chamfer btn btn--muted btn--icon" type="button" aria-label="Previous page"><span>←</span></button><button class="chamfer btn btn--muted btn--icon" type="button" aria-label="Next page"><span>→</span></button></div></div>
+    </div>
+  </section>
+
+  <!-- Dise migration: Fields and selects -->
+  <section class="chamfer card card--accent-left accent-green" id="component-field" data-component="Field TextInput PasswordInput Select Listbox" data-section-ref="17">
+    <p class="section-label">Fields, inputs &amp; select</p>
+    <div class="field-grid">
+      <div class="field"><div class="field-label-row"><label class="field-label" for="demoAlias">Role alias</label><span class="field-optional">optional</span></div><div class="chamfer field-control"><input class="field-input" id="demoAlias" placeholder="Example: observer-east"></div><p class="field-hint" id="demoAliasHint">Visible to operators; does not change the machine identifier.</p></div>
+      <div class="field"><div class="field-label-row"><label class="field-label" for="demoPassword">Current password</label></div><div class="chamfer field-control"><input class="field-input" id="demoPassword" type="password" value="synthetic-password" autocomplete="current-password" aria-describedby="demoPasswordHint"><button class="field-action password-toggle" type="button" aria-label="Show password" aria-controls="demoPassword">◉</button></div><p class="field-hint" id="demoPasswordHint">Required to unlock this synthetic console.</p></div>
+      <div class="field field--invalid"><div class="field-label-row"><label class="field-label" for="demoInvalid">Token label</label></div><div class="chamfer field-control"><input class="field-input" id="demoInvalid" value="x" aria-invalid="true" aria-describedby="demoInvalidError"></div><p class="field-message" id="demoInvalidError">Use at least three characters.<br>The label must not match a reserved capability name.</p></div>
+      <div class="field"><div class="field-label-row"><label class="field-label" for="demoReadonly">Generated identifier</label></div><div class="chamfer field-control"><input class="field-input" id="demoReadonly" value="role_demo_01HF7K" readonly></div><p class="field-hint">Read-only values remain selectable.</p></div>
+      <div class="field"><div class="field-label-row"><label class="field-label" for="demoDisabled">Disabled field</label></div><div class="chamfer field-control"><input class="field-input" id="demoDisabled" value="Unavailable while offline" disabled></div><p class="field-hint">The reason remains visible.</p></div>
+      <div class="field field--loading"><div class="field-label-row"><label class="field-label" for="demoChecking">Route label</label></div><div class="chamfer field-control"><input class="field-input" id="demoChecking" value="codex-review"></div><p class="field-message" role="status">Checking availability…</p></div>
+      <div class="field"><div class="field-label-row"><label class="field-label" for="nativeMode">Native select</label></div><div class="chamfer field-control"><select class="field-input native-select" id="nativeMode"><option value="">Choose a mode</option><option>Observation</option><option>Simulation</option><option disabled>Live mutation (unavailable)</option></select><span class="select-caret"></span></div><p class="field-hint">Preferred when rich option content is unnecessary.</p></div>
+      <div class="field"><div class="field-label-row"><span class="field-label" id="routeListboxLabel">Rich invocation route</span></div><div class="listbox" data-listbox><button class="listbox-trigger" type="button" aria-labelledby="routeListboxLabel routeListboxValue" aria-haspopup="listbox" aria-expanded="false" aria-controls="routeListboxMenu"><span class="listbox-value mono" id="routeListboxValue">Choose synthetic route</span><span aria-hidden="true">▾</span></button><div class="listbox-menu"><div class="listbox-menu-scroll" id="routeListboxMenu" role="listbox" tabindex="-1"><div class="listbox-option" role="option" aria-selected="false" data-value="route_codex_review"><span class="listbox-option-label">Codex review route</span><span class="listbox-option-detail">codex · gpt-5 · code-review</span></div><div class="listbox-option" role="option" aria-selected="false" data-value="route_claude_summary"><span class="listbox-option-label">Claude summary route</span><span class="listbox-option-detail">claude · sonnet · commit-summary</span></div><div class="listbox-option" role="option" aria-selected="false" aria-disabled="true" data-value="route_unavailable"><span class="listbox-option-label">Unavailable route</span><span class="listbox-option-detail">model probe has not completed</span></div><div class="listbox-option" role="option" aria-selected="false" data-value="route_extremely_long"><span class="listbox-option-label">Long invocation route label for viewport testing</span><span class="listbox-option-detail">opencode · synthetic-model-with-a-long-name · audit</span></div></div></div></div><p class="field-hint">Arrow keys, Home/End, typeahead, Enter, Escape, and Tab are supported.</p></div>
+    </div>
+  </section>
+
+  <!-- Console migration: Metrics and paired stream values -->
+  <section class="chamfer card card--accent-left accent-green" id="component-stat" data-component="Stat MetricGrid ValuePair" data-section-ref="20">
+    <p class="section-label">Stat, MetricGrid &amp; ValuePair</p>
+    <div class="metric-grid metric-grid--six">
+      <div class="stat"><span class="stat-label">Retained jobs</span><div class="stat-value">12,480</div><p class="stat-meta">updated 4s ago</p></div>
+      <div class="stat stat--positive"><span class="stat-label">Results ready</span><div class="stat-value">8,120</div><p class="stat-meta">65.1% complete</p></div>
+      <div class="stat"><span class="stat-label">Active routes</span><div class="stat-value">14</div><p class="stat-meta">across 4 harnesses</p></div>
+      <div class="stat stat--warning"><span class="stat-label">Retrying steps</span><div class="stat-value">2</div><p class="stat-meta">within retry budget</p></div>
+      <div class="stat"><span class="stat-label">Stream readers</span><div class="stat-value">4</div><p class="stat-meta">all synthetic</p></div>
+      <div class="stat"><span class="stat-label">Unavailable</span><div class="stat-value">—</div><p class="stat-meta">source offline</p></div>
+    </div>
+    <div class="value-pair">
+      <div class="value-source"><span class="value-source-name">jobs.events</span><p class="value-meta">Structured stream · age 180ms</p></div>
+      <div class="value-channel value-channel--input"><span class="value-channel-label">Head</span><span class="value-reading">12,480</span></div>
+      <div class="value-channel value-channel--output"><span class="value-channel-label">Replica</span><span class="value-reading">12,476</span></div>
+    </div>
+    <div class="value-pair value-pair--stale">
+      <div class="value-source"><span class="value-source-name">artifacts.events</span><p class="value-meta">Stale · last update 46s ago</p></div>
+      <div class="value-channel value-channel--input"><span class="value-channel-label">Head</span><span class="value-reading">—</span></div>
+      <div class="value-channel value-channel--output"><span class="value-channel-label">Replica</span><span class="value-reading">—</span></div>
+    </div>
+  </section>
+
+  <!-- Dise migration: Feedback -->
+  <section class="chamfer card card--accent-left accent-orange" id="component-feedback" data-component="Callout InlineMessage Badge StatusDot ConnectionStatus" data-section-ref="21">
+    <p class="section-label">Feedback &amp; status</p>
+    <div class="chamfer callout callout--warning"><div class="callout-title">Readiness blocked by four checks</div><div class="callout-body"><ul class="callout-reasons"><li>Synthetic daemon handshake incomplete</li><li>Two required observation scopes are missing</li><li>Result stream is stale</li><li>Commit import awaits review</li></ul></div></div>
+    <div class="chamfer callout callout--success"><div class="callout-title">All checks clear</div><div class="callout-body">Observation may continue; no mutation capability is enabled.</div></div>
+    <div class="chamfer callout callout--held"><div class="callout-title">Two simultaneous workflow pauses</div><div class="callout-body">Retry budget pause · 2m 14s<br>Operator review pause · 38s</div></div>
+    <div class="state-gallery">
+      <div class="state-sample"><p class="state-sample-label">Connection</p><span class="connection-status"><span class="dot dot--connecting"></span><span class="connection-label">Connecting</span><span class="connection-detail">attempt 2 of 5</span></span></div>
+      <div class="state-sample"><p class="state-sample-label">Badges</p><div class="badge-row"><span class="chamfer badge badge--green"><span>Active</span></span><span class="chamfer badge badge--orange"><span>Paused</span></span><span class="chamfer badge badge--red"><span>Stale</span></span><span class="chamfer badge badge--purple"><span>Running</span></span></div></div>
+      <div class="state-sample"><p class="state-sample-label">Inline messages</p><p class="inline-message inline-message--progress">Checking synthetic capability…</p><p class="inline-message inline-message--success">Capability verified.</p><p class="inline-message inline-message--error">Request failed safely.<br>No existing data was discarded.</p></div>
+    </div>
+    <div class="chamfer callout callout--error"><div class="callout-title">Synthetic stream stale</div><div class="callout-body">Read-only inspection remains available. Actions requiring current evidence are disabled.</div></div>
+  </section>
+
+  <!-- Dise migration: Dialog, tooltip, copy -->
+  <section class="chamfer card card--accent-left accent-cyan" id="component-overlay" data-component="Dialog Tooltip CopyPopover CopyValue" data-section-ref="22">
+    <p class="section-label">Dialog, Tooltip &amp; CopyPopover</p>
+    <div class="btn-row"><button class="chamfer btn btn--purple" id="openTokenDialog" type="button"><span>Generate synthetic token…</span></button><button class="chamfer btn btn--cyan" id="openResultDialog" type="button"><span>Show command result…</span></button></div>
+    <p class="demo-note">Dialogs trap focus, close with Escape, restore focus, and keep long output inside their body.</p>
+    <div class="panel"><p><button class="tip-target" type="button" data-tooltip="Short supplementary help that is never required to operate the control.">Hover or focus for help</button> · <button class="tip-target" type="button" data-tooltip="This edge-placed tooltip flips to remain inside the viewport.">Viewport-edge placement</button></p></div>
+    <div class="panel"><p>Job <button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_01J4SYNTHETIC8M2Q7K">job_demo_01J4…Q7K</button> · Exact duration <button class="copy-value-trigger mono" type="button" data-copy-label="Exact synthetic duration" data-copy-value="1234.567890123456 ms">1,234.57 ms</button> · Session <button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic session ID" data-copy-value="session_demo_7Q2F9M4K8P1N6D3R5T0V">session_demo_7Q2F…T0V</button></p></div>
+  </section>
+
+  <!-- Dise migration: DataTable and reveal -->
+  <section class="chamfer card card--accent-left accent-green" id="component-table" data-component="DataTable ProgressiveReveal" data-section-ref="23">
+    <p class="section-label">DataTable &amp; ProgressiveReveal</p>
+    <div class="data-table-viewport" tabindex="0" aria-label="Synthetic invocation routes table, horizontally scrollable"><table class="data-table data-table--dense"><caption class="sr-only">Synthetic invocation routes</caption><thead><tr><th scope="col">Invocation</th><th scope="col">Harness</th><th scope="col">Model</th><th scope="col">Profile</th><th scope="col">Attempts</th><th scope="col">Budget</th><th scope="col">Result</th><th scope="col">Status</th><th scope="col">Started</th><th scope="col">Action</th></tr></thead><tbody id="invocationsBody"><tr class="row--current"><td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_current_00000001">job_demo…0001</button></td><td class="mono">codex</td><td>gpt-5</td><td>code-review</td><td class="numeric">1</td><td class="numeric">900s</td><td class="mono">review.json</td><td><span class="chamfer badge badge--green"><span>Complete</span></span></td><td class="mono">10:41:12</td><td><button class="chamfer btn btn--muted btn--small" type="button"><span>Inspect</span></button></td></tr><tr class="row--running"><td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_running_00000002">job_demo…0002</button></td><td class="mono">claude</td><td>sonnet</td><td>commit-summary</td><td class="numeric">1</td><td class="numeric">600s</td><td class="numeric">—</td><td><span class="chamfer badge badge--purple"><span>Running</span></span></td><td class="mono">10:42:03</td><td><button class="chamfer btn btn--red btn--small" type="button"><span>Stop</span></button></td></tr><tr class="row--failed"><td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_failed_00000003">job_demo…0003</button></td><td class="mono">opencode</td><td>glm-demo</td><td>audit</td><td class="numeric">3</td><td class="numeric">480s</td><td class="numeric">—</td><td><span class="chamfer badge badge--red"><span>Failed</span></span></td><td class="mono">10:42:18</td><td><button class="chamfer btn btn--muted btn--small" type="button"><span>Retry</span></button></td></tr></tbody></table></div>
+    <div class="progressive-reveal"><button class="chamfer btn btn--cyan btn--small" id="loadInvocations" type="button"><span>Load 20 more</span></button><button class="btn btn--ghost btn--small" id="collapseInvocations" type="button" hidden><span>Collapse</span></button><span class="inline-message" id="invocationsRevealStatus" role="status">6 shown · 20 retained</span></div>
+    <div class="state-gallery">
+      <div class="state-sample"><p class="state-sample-label">Empty results</p><p class="empty-state"><strong>No retained results</strong>No synthetic jobs have completed.</p></div>
+      <div class="state-sample"><p class="state-sample-label">Loading table</p><div class="skeleton-stack" aria-label="Loading invocations"><span class="skeleton-line"></span><span class="skeleton-line"></span><span class="skeleton-line skeleton-line--short"></span></div></div>
+      <div class="state-sample"><p class="state-sample-label">Error row</p><p class="inline-message inline-message--error">Jobs could not refresh. Previously loaded rows remain visible.</p></div>
+    </div>
+  </section>
+
+  <!-- Dise migration: Event log -->
+  <section class="chamfer card card--accent-left accent-orange" id="component-disclosure" data-component="Disclosure EventLogRow" data-section-ref="24">
+    <p class="section-label">Disclosure &amp; EventLogRow</p>
+    <div class="event-log" aria-label="Synthetic event log">
+      <details class="event-row"><summary class="event-summary"><time class="event-time">10:40:01</time><span class="event-age">2m ago</span><span class="event-gap" aria-label="First visible event"></span><span class="event-type">Normal</span><span class="event-summary-text">Synthetic daemon connected to the observation stream.</span><span class="event-caret">▶</span></summary><div class="event-detail"><pre class="event-json">{"event":"demo.connected","stream":"synthetic"}</pre></div></details>
+      <details class="event-row" open><summary class="event-summary"><time class="event-time">10:41:12</time><span class="event-age">58s ago</span><span class="event-gap">+71s</span><span class="event-type event-type--success">Success</span><span class="event-summary-text">Synthetic readiness checks completed without mutation access.</span><span class="event-caret">▶</span></summary><div class="event-detail"><pre class="event-json">{
+  "event": "demo.readiness",
+  "result": "ready",
+  "mutation_enabled": false
+}</pre></div></details>
+      <details class="event-row"><summary class="event-summary"><time class="event-time">10:41:46</time><span class="event-age">24s ago</span><span class="event-gap">+34s</span><span class="event-type event-type--pipeline">Pipeline</span><span class="event-summary-text">Synthetic transform waited because its upstream artifact was not ready.</span><span class="event-caret">▶</span></summary><div class="event-detail"><pre class="event-json">{"decision":"wait","upstream":"review-codex"}</pre></div></details>
+      <details class="event-row"><summary class="event-summary"><time class="event-time">10:41:58</time><span class="event-age">12s ago</span><span class="event-gap">+12s</span><span class="event-type event-type--warning">Paused</span><span class="event-summary-text">Retry pause activated because the synthetic result stream is stale.</span><span class="event-caret">▶</span></summary><div class="event-detail"><pre class="event-json">{"pause":"stale_result_stream","duration_ms":12000}</pre></div></details>
+      <details class="event-row"><summary class="event-summary"><time class="event-time">10:42:03</time><span class="event-age">7s ago</span><span class="event-gap">+5s</span><span class="event-type event-type--error">Failure</span><span class="event-summary-text">Synthetic command was rejected safely; no retained state changed.</span><span class="event-caret">▶</span></summary><div class="event-detail"><pre class="event-json">{"error":"demo_rejection","retryable":true}</pre></div></details>
+    </div>
+  </section>
+
+  <!-- Dise migration: Code and secrets -->
+  <section class="chamfer card card--accent-left accent-purple" id="component-code" data-component="CodeBlock SecretValue" data-section-ref="25">
+    <p class="section-label">CodeBlock &amp; SecretValue</p>
+    <div class="code-block code-block--wrap"><div class="code-block-head"><span>Synthetic JSON response</span><button class="chamfer btn btn--muted btn--small copy-static" type="button" data-copy-target="demoJson"><span>Copy JSON</span></button></div><pre class="code-block-body" id="demoJson">{
+  "repository": "repo_demo_alpha",
+  "capability": "observation-only",
+  "expires_at": "2099-01-01T00:00:00Z"
+}</pre></div>
+    <div class="secret-value"><div class="component-row"><strong>Synthetic capability token</strong><button class="chamfer btn btn--muted btn--small secret-toggle" type="button" aria-pressed="false"><span>Reveal</span></button><button class="chamfer btn btn--cyan btn--small copy-static" type="button" data-copy-target="demoSecret"><span>Copy token</span></button></div><div class="secret-text" id="demoSecret" data-secret="ZGVtb19jYXBhYmlsaXR5X3Rva2VuX25vdF9hX3JlYWxfdmFsdWVfMDEyMzQ1Njc4OQ==">••••••••••••••••••••••••••••••••</div><p class="secret-warning">Synthetic example. Real one-time values should be stored before this dialog is closed.</p><p class="inline-message" role="status"></p></div>
+  </section>
+
+  <!-- Dise migration: Plot -->
+  <section class="chamfer card card--accent-left accent-magenta" id="component-plot" data-component="Plot" data-section-ref="26">
+    <p class="section-label">Plot</p>
+    <div class="plot-legend"><span class="plot-key plot-key--input">Published rate</span><span class="plot-key plot-key--output">Applied rate</span><span class="plot-key plot-key--live">Live sample</span></div>
+    <div class="plot-shell"><canvas class="plot-canvas" id="streamPlot" tabindex="0" role="img" aria-label="Synthetic stream throughput curve" aria-describedby="plotSummary"></canvas><div class="plot-summary" id="plotSummary" aria-live="polite"><span>Window <strong>−1.00…1.00</strong></span><span>Live <strong id="plotLive">0.18 / 101.26</strong></span><span>Cursor <strong id="plotCursor">0.00 / 100.00</strong></span></div></div>
+    <div class="state-gallery"><div class="state-sample"><p class="state-sample-label">No series</p><div class="plot-empty">No synthetic stream samples retained.</div></div><div class="state-sample"><p class="state-sample-label">Invalid data</p><div class="inline-message inline-message--error">Sample points must be finite and ordered.</div></div></div>
+  </section>
+
+  <!-- Dise migration: App shell -->
+  <section class="chamfer card card--accent-top accent-cyan" id="component-shell" data-component="AppShell StickyChrome" data-section-ref="27">
+    <p class="section-label">AppShell &amp; StickyChrome</p>
+    <div class="app-shell-demo">
+      <div class="app-shell-status"><span class="connection-status"><span class="dot dot--live"></span><span class="connection-label">Synthetic daemon online</span></span><span class="mono">up 3d 14h</span></div>
+      <div class="app-shell-stream"><span>jobs.events</span><span class="glyph--done">Head 12,480</span><span class="glyph--failed">Replica 12,476</span></div>
+      <div class="app-shell-tabs" role="tablist" aria-label="Synthetic console modes" data-tabs>
+        <button class="app-shell-tab" id="shellJobsTab" role="tab" aria-selected="false" aria-controls="shellJobsPanel" tabindex="-1">Jobs</button>
+        <button class="app-shell-tab" id="shellWorkflowsTab" role="tab" aria-selected="false" aria-controls="shellWorkflowsPanel" tabindex="-1">Workflows</button>
+        <button class="app-shell-tab" id="shellStreamsTab" role="tab" aria-selected="true" aria-controls="shellStreamsPanel" tabindex="0">Streams</button>
+        <button class="app-shell-tab" id="shellAuthTab" role="tab" aria-selected="false" aria-controls="shellAuthPanel" tabindex="-1">Config</button>
+      </div>
+      <div class="app-shell-subrow"><span>All jobs</span><span>code-review</span><span>commit-summary · running</span><span>gorgeous-pipeline</span></div>
+      <div class="chamfer callout callout--warning callout--compact"><div class="callout-title">Result stream stale</div><div class="callout-body">The shell keeps the current mode and read-only inspection available.</div></div>
+      <div class="app-shell-main">
+        <div class="panel app-shell-panel" id="shellJobsPanel" role="tabpanel" aria-labelledby="shellJobsTab" hidden><strong>Jobs · All repositories</strong><p class="demo-note">Job inspection keeps its own synthetic profile focus.</p></div>
+        <div class="panel app-shell-panel" id="shellWorkflowsPanel" role="tabpanel" aria-labelledby="shellWorkflowsTab" hidden><strong>Workflows · gorgeous-pipeline</strong><p class="demo-note">Workflow inspection keeps its own synthetic run focus.</p></div>
+        <div class="panel app-shell-panel" id="shellStreamsPanel" role="tabpanel" aria-labelledby="shellStreamsTab"><strong>Streams · jobs.events</strong><p class="demo-note">Popover and dialog bounds are measured from rendered sticky chrome.</p></div>
+        <div class="panel app-shell-panel" id="shellAuthPanel" role="tabpanel" aria-labelledby="shellAuthTab" hidden><strong>Config · Capabilities</strong><p class="demo-note">Capability controls use the shared field and dialog primitives.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dise migration: Cross-component states -->
+  <section class="chamfer card card--accent-left accent-yellow" id="component-states" data-component="Empty Loading Error Stale Responsive Focus" data-section-ref="28">
+    <p class="section-label">Cross-component states &amp; responsive contract</p>
+    <div class="table-scroll"><table class="state-matrix"><thead><tr><th>Component</th><th>Empty</th><th>Loading</th><th>Error</th><th>Stale</th></tr></thead><tbody><tr><td>Card</td><td>Named absence</td><td class="state-chip--loading">Skeleton</td><td class="state-chip--error">Callout</td><td class="state-chip--stale">Age retained</td></tr><tr><td>Select</td><td>No options</td><td class="state-chip--loading">Trigger busy</td><td class="state-chip--error">InlineMessage</td><td>Last value labeled</td></tr><tr><td>DataTable</td><td>Colspan message</td><td class="state-chip--loading">Stable rows</td><td class="state-chip--error">Rows preserved</td><td class="state-chip--stale">Timestamped</td></tr><tr><td>EventLog</td><td>No events</td><td class="state-chip--loading">Existing open rows</td><td class="state-chip--error">Retry detail</td><td class="state-chip--stale">Ages continue</td></tr><tr><td>Plot</td><td>No series</td><td class="state-chip--loading">Viewport reserved</td><td class="state-chip--error">Text alternative</td><td class="state-chip--stale">Marker labeled</td></tr><tr><td>Dialog</td><td>Result absent</td><td class="state-chip--loading">Local action</td><td class="state-chip--error">Full message</td><td>Existing result kept</td></tr><tr><td>ScopeSwitcher</td><td>No routes</td><td class="state-chip--loading">Selection retained</td><td class="state-chip--error">Unavailable reason</td><td class="state-chip--stale">Running route distinct</td></tr></tbody></table></div>
+    <div class="state-gallery"><div class="state-sample"><p class="state-sample-label">Keyboard focus</p><button class="chamfer btn btn--cyan focus-demo" type="button"><span>Visible focus target</span></button></div><div class="state-sample"><p class="state-sample-label">Reduced motion</p><p class="inline-message">Decorative motion stops under <span class="mono">prefers-reduced-motion</span>; state remains textual.</p></div><div class="state-sample"><p class="state-sample-label">Narrow screens</p><p class="inline-message">Tables and secondary navigation scroll within bounded regions below 520px.</p></div></div>
+  </section>
+
   <!-- Dialog & toast -->
-  <div class="chamfer card card--accent-left accent-orange">
+  <div class="chamfer card card--accent-left accent-orange" data-section-ref="29">
     <p class="section-label">Dialog &amp; toast</p>
     <div class="btn-row">
       <button class="chamfer btn btn--red" id="openDialog"><span>Force stop&hellip;</span></button>
@@ -1343,34 +2826,68 @@
     <p class="demo-note">The dialog replaces the browser confirm; the toast is non-blocking feedback.</p>
   </div>
 
-  <!-- Tooltip -->
-  <div class="chamfer card card--accent-left accent-cyan">
+  <!-- Tooltip: noninteractive supplementary information -->
+  <div class="chamfer card card--accent-left accent-cyan" data-section-ref="30">
     <p class="section-label">Tooltip</p>
-    <p style="font-size:0.9rem;">
-      Job <span class="tip-target mono" data-tip="started 10:41 · branch main&#10;profile: code-review">j-4f2a9c</span>
-      is running <span class="tip-target" data-tip="opencode ✓ · claude ✓ · codex ◉ running for 2m 18s">3 procs</span>;
-      one earlier proc exited <span class="tip-target" data-tip="finished on its own after the stop signal, before the kill deadline">gracefully</span>.
+    <p class="tooltip-sentence">
+      Job <button class="tip-target mono" type="button" data-tooltip="Synthetic job j-4f2a9c&#10;branch: main&#10;profile: code-review" data-copy-items="[[&quot;job&quot;,&quot;j-4f2a9c&quot;],[&quot;branch&quot;,&quot;main&quot;],[&quot;profile&quot;,&quot;code-review&quot;]]">j-4f2a9c</button>
+      is running <button class="tip-target" type="button" data-tooltip="opencode ready · claude ready · codex running for 2m 18s" data-copy-items="[[&quot;processes&quot;,&quot;opencode ready · claude ready · codex running for 2m 18s&quot;]]">3 processes</button>;
+      one earlier process exited <button class="tip-target" type="button" data-tooltip="Finished on its own after the stop signal, before the synthetic kill deadline." data-copy-items="[[&quot;result&quot;,&quot;finished gracefully before the synthetic kill deadline&quot;]]">gracefully</button>.
     </p>
+    <p class="demo-note">Hover or focus after a short delay. Tooltip content is supplementary and never interactive; Escape, blur, and pointer leave close it.</p>
   </div>
 
   <!-- overlays -->
-  <div class="overlay" id="overlay">
-    <div class="dialog-shadow">
-      <div class="chamfer dialog" id="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
-        <p class="dialog-title" id="dlgTitle">Force stop job j-4f2a9c?</p>
-        <p class="dialog-body">All 3 running procs will be killed immediately. Partial results are kept, but casts may be truncated.</p>
-        <div class="dialog-actions">
-          <button class="chamfer btn btn--muted" id="dlgCancel" type="button"><span>Cancel</span></button>
-          <button class="chamfer btn btn--red" id="dlgConfirm" type="button"><span>Force stop</span></button>
-        </div>
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="chamfer dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle" tabindex="-1">
+      <p class="dialog-title" id="dlgTitle">Force stop job j-4f2a9c?</p>
+      <p class="dialog-body">All 3 running procs will be killed immediately. Partial results are kept, but casts may be truncated.</p>
+      <div class="dialog-actions">
+        <button class="chamfer btn btn--muted" id="dlgCancel" data-dialog-close><span>Cancel</span></button>
+        <button class="chamfer btn btn--red" id="dlgConfirm"><span>Force stop</span></button>
       </div>
     </div>
   </div>
 
+  <div class="overlay" id="tokenDialog" aria-hidden="true">
+    <div class="chamfer dialog dialog--medium" role="dialog" aria-modal="true" aria-labelledby="tokenDialogTitle" aria-describedby="tokenDialogDescription" tabindex="-1">
+      <div class="dialog-header"><div><p class="section-label">Capability</p><h2 class="dialog-title" id="tokenDialogTitle">Generate synthetic token</h2></div><button class="chamfer btn btn--ghost btn--icon" type="button" data-dialog-close aria-label="Close token dialog"><span>×</span></button></div>
+      <div class="dialog-scroll">
+        <p class="dialog-body" id="tokenDialogDescription">This demonstration never contacts a service and generates no usable credential.</p>
+        <div class="field-grid"><div class="field"><div class="field-label-row"><label class="field-label" for="tokenName">Token label</label></div><div class="chamfer field-control"><input class="field-input" id="tokenName" value="synthetic-observer"></div><p class="field-hint">A human-readable synthetic label.</p></div><div class="field"><div class="field-label-row"><label class="field-label" for="tokenLifetime">Lifetime</label></div><div class="chamfer field-control"><select class="field-input native-select" id="tokenLifetime"><option>15 minutes</option><option>1 hour</option><option>1 day</option></select><span class="select-caret"></span></div><p class="field-hint">Demo presentation only.</p></div></div>
+        <div class="permission-list"><label class="permission-row permission-row--locked"><input class="tree-input" type="checkbox" checked disabled><span class="tree-box" aria-hidden="true"></span><span><span class="permission-name">Identify capability</span><span class="permission-detail">Mandatory synthetic baseline.</span></span><span class="permission-scope">Observes · identity:read</span></label><label class="permission-row"><input class="tree-input" type="checkbox"><span class="tree-box" aria-hidden="true"></span><span><span class="permission-name">Read job results</span><span class="permission-detail">Optional observation scope.</span></span><span class="permission-scope">Observes · jobs:read</span></label></div>
+      </div>
+      <div class="dialog-actions"><button class="chamfer btn btn--muted" type="button" data-dialog-close><span>Cancel</span></button><button class="chamfer btn btn--purple" type="button" id="generateDemoToken"><span>Generate example</span></button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="resultDialog" aria-hidden="true">
+    <div class="chamfer dialog dialog--large" role="dialog" aria-modal="true" aria-labelledby="resultDialogTitle" tabindex="-1">
+      <div class="dialog-header"><div><p class="section-label">Command result</p><h2 class="dialog-title" id="resultDialogTitle">Synthetic command states</h2></div><button class="chamfer btn btn--ghost btn--icon" type="button" data-dialog-close aria-label="Close command result dialog"><span>×</span></button></div>
+      <div class="dialog-scroll dialog-state-grid">
+        <div class="panel" aria-busy="true"><p class="inline-message inline-message--progress"><span class="btn-spinner"></span>Running <span class="mono">demo.inspect</span>…</p></div>
+        <div class="chamfer callout callout--success"><div class="callout-title">Command completed</div><div class="callout-body">Three synthetic records were inspected. Nothing was mutated.</div></div>
+        <div class="code-block code-block--wrap"><div class="code-block-head"><span>Synthetic result · JSON</span><button class="chamfer btn btn--muted btn--small copy-static" type="button" data-copy-target="dialogResultJson"><span>Copy JSON</span></button></div><pre class="code-block-body" id="dialogResultJson">{"status":"ok","records":3,"synthetic":true}</pre></div>
+        <div class="chamfer callout callout--error"><div class="callout-title">Error example</div><div class="callout-body">The demonstration request could not be repeated because its fixture was intentionally unavailable. Existing output remains visible.</div></div>
+      </div>
+      <div class="dialog-actions"><button class="chamfer btn btn--cyan" type="button" data-dialog-close><span>Done</span></button></div>
+    </div>
+  </div>
+
+  <div class="copy-popover" id="copyPopover" role="dialog" aria-labelledby="copyPopoverTitle" tabindex="-1">
+    <h2 class="copy-popover-title" id="copyPopoverTitle">Complete value</h2>
+    <div class="copy-popover-value" id="copyPopoverValue"></div>
+    <div class="copy-popover-actions"><span class="copy-feedback" id="copyPopoverFeedback" role="status" aria-live="polite"></span><button class="chamfer btn btn--cyan btn--small copy-popover-copy" type="button"><span>Copy complete value</span></button></div>
+  </div>
+
   <div class="chamfer toast" id="toast" role="status"><span></span></div>
-  <div class="chamfer ui-tip" id="uiTip"><span></span></div>
+  <div class="chamfer ui-tip" id="uiTip" role="tooltip" aria-hidden="true"><div class="ui-tip-lines"></div></div>
 
 <script>
+  // programmatic smooth scrolling honors the user's reduced-motion setting
+  const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const scrollBehavior = () => (prefersReducedMotion.matches ? 'auto' : 'smooth');
+
   // tabs
   const tabPanelCopy = {
     run: 'Pick a repo and launch a harness.',
@@ -1394,15 +2911,232 @@
   document.querySelectorAll('.seg').forEach(seg => {
     seg.querySelectorAll('.seg-opt').forEach(opt => {
       opt.addEventListener('click', () => {
-        seg.querySelectorAll('.seg-opt').forEach(o => {
-          o.classList.remove('active');
-          o.setAttribute('aria-checked', 'false');
-        });
+        seg.querySelectorAll('.seg-opt').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
-        opt.setAttribute('aria-checked', 'true');
       });
     });
   });
+
+  // scrollable segmented rail
+  document.querySelectorAll('[data-scrollseg]').forEach(control => {
+    const scroll = control.querySelector('.scrollseg-scroll');
+    const count = control.querySelector('.scrollseg-pinned-count');
+    const options = [...control.querySelectorAll('.scrollseg-option')];
+    let pinSequence = 0;
+
+    function updatePinnedOptions() {
+      const pinned = options
+        .filter(option => option.classList.contains('is-pinned'))
+        .sort((a, b) => Number(b.dataset.pinSequence) - Number(a.dataset.pinSequence));
+      options.forEach(option => option.parentElement.style.removeProperty('order'));
+      pinned.forEach((option, index) => {
+        option.parentElement.style.order = String(index - pinned.length);
+      });
+      count.textContent = `${pinned.length} pinned`;
+    }
+
+    function updatePinAvailability() {
+      const pinningUnnecessary = scroll.scrollWidth <= scroll.clientWidth + 1;
+      control.classList.toggle('pinning-unnecessary', pinningUnnecessary);
+
+      if (pinningUnnecessary) {
+        options.forEach(option => {
+          option.classList.remove('is-pinned');
+          option.parentElement.classList.remove('is-pinned');
+          option.parentElement.style.removeProperty('order');
+          delete option.dataset.pinSequence;
+        });
+      }
+
+      options.forEach(option => {
+        const pin = option.querySelector('.scrollseg-pin');
+        const name = option.querySelector('.scrollseg-title').textContent;
+        const pinned = option.classList.contains('is-pinned');
+        pin.disabled = pinningUnnecessary;
+        pin.setAttribute('aria-pressed', String(pinned));
+        pin.setAttribute('aria-label', pinningUnnecessary ?
+          `Pinning unnecessary for ${name}; all options fit` :
+          `${pinned ? 'Unpin' : 'Pin'} ${name}`);
+        pin.title = pinningUnnecessary ?
+          'Pinning unnecessary — all options fit' :
+          `${pinned ? 'Unpin' : 'Pin'} ${name}`;
+      });
+
+      if (pinningUnnecessary) count.textContent = 'Pinning not needed';
+      else updatePinnedOptions();
+    }
+
+    options.forEach(option => {
+      const select = option.querySelector('.scrollseg-select');
+      const pin = option.querySelector('.scrollseg-pin');
+
+      select.addEventListener('click', () => {
+        options.forEach(item => {
+          const active = item === option;
+          item.classList.toggle('active', active);
+          item.querySelector('.scrollseg-select').setAttribute('aria-checked', String(active));
+        });
+      });
+
+      pin.addEventListener('click', () => {
+        const willPin = !option.classList.contains('is-pinned');
+        option.classList.toggle('is-pinned', willPin);
+        option.parentElement.classList.toggle('is-pinned', willPin);
+        if (willPin) option.dataset.pinSequence = String(++pinSequence);
+        else delete option.dataset.pinSequence;
+        updatePinnedOptions();
+        updatePinAvailability();
+
+        if (willPin) {
+          scroll.scrollTo({ left: 0, behavior: scrollBehavior() });
+        } else {
+          const home = option.parentElement;
+          scroll.scrollTo({
+            left: home.offsetLeft + home.offsetWidth / 2 - scroll.clientWidth / 2,
+            behavior: scrollBehavior()
+          });
+        }
+      });
+    });
+
+    updatePinAvailability();
+    if ('ResizeObserver' in window) new ResizeObserver(updatePinAvailability).observe(scroll);
+    else addEventListener('resize', updatePinAvailability);
+  });
+
+  // hierarchical checkboxes
+  document.querySelectorAll('[data-checktree]').forEach(tree => {
+    const parents = [...tree.querySelectorAll('.tree-parent')];
+
+    parents.forEach(parent => {
+      const branch = parent.closest('.tree-branch');
+      const label = parent.closest('.tree-label');
+      const branchName = label.querySelector('.tree-name').textContent;
+      const branchCount = label.querySelector('.tree-count');
+      const row = document.createElement('div');
+      const tools = document.createElement('span');
+      row.className = 'tree-branch-row';
+      tools.className = 'tree-branch-tools';
+      tools.setAttribute('aria-label', `${branchName} type selection`);
+      ['readonly', 'mutable'].forEach(kind => {
+        const button = document.createElement('button');
+        const readableKind = kind === 'readonly' ? 'read-only' : 'mutable';
+        button.className = `tree-kind-toggle tree-kind-toggle--${kind}`;
+        button.type = 'button';
+        button.dataset.treeKind = kind;
+        button.dataset.state = 'none';
+        button.setAttribute('aria-label', `Select all ${readableKind} in ${branchName}`);
+        button.setAttribute('aria-pressed', 'false');
+        button.title = `Select all ${readableKind} in ${branchName}`;
+        tools.appendChild(button);
+      });
+      branch.insertBefore(row, label);
+      row.append(label, tools, branchCount);
+    });
+
+    function updateTreeState() {
+      [...parents].reverse().forEach(parent => {
+        const branch = parent.closest('.tree-branch');
+        const branchLeaves = [...branch.querySelectorAll('.tree-leaf .tree-input')];
+        const selected = branchLeaves.filter(input => input.checked).length;
+        parent.checked = selected === branchLeaves.length;
+        parent.indeterminate = selected > 0 && selected < branchLeaves.length;
+        const typeSummaries = Object.fromEntries(['readonly', 'mutable'].map(kind => {
+          const kindLeaves = branchLeaves.filter(input => input.dataset.kind === kind);
+          const kindSelected = kindLeaves.filter(input => input.checked).length;
+          const state = kindSelected === 0 ? 'none' :
+            kindSelected === kindLeaves.length ? 'all' : 'partial';
+          return [kind, { leaves: kindLeaves, selected: kindSelected, state }];
+        }));
+        const branchBox = parent.nextElementSibling;
+        branchBox.dataset.readonlyState = typeSummaries.readonly.state;
+        branchBox.dataset.mutableState = typeSummaries.mutable.state;
+        parent.closest('.tree-label').title = ['readonly', 'mutable'].map(kind => {
+          const summary = typeSummaries[kind];
+          if (summary.leaves.length === 0) return null;
+          const readableKind = kind === 'readonly' ? 'read-only' : 'mutable';
+          return `${summary.selected} of ${summary.leaves.length} ${readableKind}`;
+        }).filter(Boolean).join(', ') + ' selected';
+
+        const count = branch.querySelector(':scope > .tree-branch-row > .tree-count');
+        const countKinds = ['readonly', 'mutable'].map(kind => {
+          const summary = typeSummaries[kind];
+          if (summary.leaves.length === 0) return null;
+          const readableKind = kind === 'readonly' ? 'read-only' : 'mutable';
+          const value = document.createElement('span');
+          value.className = `tree-count-kind tree-count-kind--${kind}`;
+          value.classList.toggle('has-selection', summary.selected > 0);
+          value.textContent = `${summary.selected} / ${summary.leaves.length}`;
+          value.title = `${summary.selected} of ${summary.leaves.length} ${readableKind} selected`;
+          value.setAttribute('aria-label', value.title);
+          return value;
+        }).filter(Boolean);
+        count.replaceChildren(...countKinds);
+
+        branch.querySelectorAll(':scope > .tree-branch-row > .tree-branch-tools .tree-kind-toggle').forEach(button => {
+          const summary = typeSummaries[button.dataset.treeKind];
+          const readableKind = button.dataset.treeKind === 'readonly' ? 'read-only' : 'mutable';
+          const action = summary.state === 'all' ? 'Clear' : 'Select';
+          const branchName = branch.querySelector(':scope > .tree-branch-row > .tree-label .tree-name').textContent;
+          button.dataset.state = summary.state;
+          button.disabled = summary.leaves.length === 0;
+          button.setAttribute('aria-pressed', summary.state === 'partial' ? 'mixed' : String(summary.state === 'all'));
+          button.setAttribute('aria-label', `${action} all ${readableKind} in ${branchName}`);
+          button.title = `${action} all ${readableKind} in ${branchName}`;
+        });
+      });
+    }
+
+    tree.addEventListener('change', e => {
+      if (!e.target.matches('.tree-input')) return;
+      if (e.target.classList.contains('tree-parent')) {
+        e.target.closest('.tree-branch').querySelectorAll('.tree-leaf .tree-input').forEach(input => {
+          input.checked = e.target.checked;
+        });
+      }
+      updateTreeState();
+    });
+
+    tree.querySelectorAll('[data-tree-kind]').forEach(button => {
+      button.addEventListener('click', () => {
+        const branch = button.closest('.tree-branch');
+        const kindLeaves = [...branch.querySelectorAll('.tree-leaf .tree-input')]
+          .filter(input => input.dataset.kind === button.dataset.treeKind);
+        const select = !kindLeaves.every(input => input.checked);
+        kindLeaves.forEach(input => { input.checked = select; });
+        updateTreeState();
+      });
+    });
+
+    updateTreeState();
+  });
+
+  // absolute log timestamps in each example's configured time zone
+  (function () {
+    const viewerTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    document.querySelectorAll('.output-variant').forEach(variant => {
+      const timeZone = variant.dataset.timeZone || viewerTimeZone;
+      const sampleDate = new Date(variant.querySelector('.at-wall')?.dateTime || Date.now());
+      const shortZone = new Intl.DateTimeFormat(undefined, { timeZone, timeZoneName: 'short' })
+        .formatToParts(sampleDate).find(part => part.type === 'timeZoneName')?.value || timeZone;
+      const clock = new Intl.DateTimeFormat(undefined, {
+        timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit',
+        fractionalSecondDigits: 3, hourCycle: 'h23'
+      });
+      const full = new Intl.DateTimeFormat(undefined, {
+        timeZone, dateStyle: 'medium', timeStyle: 'long'
+      });
+      const label = variant.querySelector('.output-zone');
+      label.textContent = label.dataset.zoneStyle === 'short' ? shortZone : timeZone;
+      label.title = timeZone;
+
+      variant.querySelectorAll('.at-wall').forEach(time => {
+        const date = new Date(time.dateTime);
+        time.textContent = clock.format(date);
+        time.title = full.format(date);
+      });
+    });
+  })();
 
   // toast
   let toastTimer;
@@ -1415,39 +3149,429 @@
   }
   document.getElementById('showToast').addEventListener('click', () => showToast('Snapshot exported'));
 
-  // dialog: focus moves onto Confirm, Tab cycles inside, and focus returns on close
-  const overlay = document.getElementById('overlay');
-  const dlg = document.getElementById('dlg');
-  const dlgConfirm = document.getElementById('dlgConfirm');
-  let dlgPrevFocus = null;
-  function openDialog() {
-    dlgPrevFocus = document.activeElement;
+  async function copyText(value) {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value);
+        return;
+      } catch {
+        // file:// and deliberately denied clipboard permissions use the selectable fallback.
+      }
+    }
+    const field = document.createElement('textarea');
+    field.value = value;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand('copy');
+    field.remove();
+    if (!copied) throw new Error('Clipboard write failed');
+  }
+
+  // modal dialog: focus trap, Escape/backdrop close, focus restoration, stable body geometry
+  let activeOverlay = null;
+  let dialogOpener = null;
+  let lockedScrollY = 0;
+  const focusableSelector = 'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
+  function setBackgroundInert(value, exception) {
+    [...document.body.children].forEach(child => {
+      if (child === exception || child.tagName === 'SCRIPT') return;
+      if (value) {
+        child.dataset.dialogInert = String(child.inert);
+        child.inert = true;
+      } else if (Object.hasOwn(child.dataset, 'dialogInert')) {
+        child.inert = child.dataset.dialogInert === 'true';
+        delete child.dataset.dialogInert;
+      }
+    });
+  }
+
+  function openDialog(overlay, opener) {
+    if (activeOverlay) closeDialog(activeOverlay, false);
+    activeOverlay = overlay;
+    dialogOpener = opener;
+    lockedScrollY = scrollY;
+    const scrollbarGap = innerWidth - document.documentElement.clientWidth;
+    if (scrollbarGap > 0) document.body.style.paddingRight = `${scrollbarGap}px`;
+    document.body.classList.add('dialog-open');
+    setBackgroundInert(true, overlay);
     overlay.classList.add('open');
-    dlgConfirm.focus();
+    overlay.setAttribute('aria-hidden', 'false');
+    const dialog = overlay.querySelector('[role="dialog"]');
+    const first = dialog.querySelector(focusableSelector) || dialog;
+    requestAnimationFrame(() => first.focus());
   }
-  function closeDialog() {
+
+  function closeDialog(overlay = activeOverlay, restore = true) {
+    if (!overlay) return;
     overlay.classList.remove('open');
-    if (dlgPrevFocus && document.contains(dlgPrevFocus)) dlgPrevFocus.focus();
+    overlay.setAttribute('aria-hidden', 'true');
+    setBackgroundInert(false);
+    document.body.classList.remove('dialog-open');
+    document.body.style.removeProperty('padding-right');
+    scrollTo(scrollX, lockedScrollY);
+    const opener = dialogOpener;
+    activeOverlay = null;
+    dialogOpener = null;
+    if (restore && opener?.isConnected) requestAnimationFrame(() => opener.focus());
   }
-  document.getElementById('openDialog').addEventListener('click', openDialog);
-  document.getElementById('dlgCancel').addEventListener('click', closeDialog);
-  dlgConfirm.addEventListener('click', () => {
-    closeDialog();
-    showToast('Force stop requested');
+
+  const dialogOpeners = new Map([
+    [document.getElementById('openDialog'), document.getElementById('overlay')],
+    [document.getElementById('openTokenDialog'), document.getElementById('tokenDialog')],
+    [document.getElementById('openResultDialog'), document.getElementById('resultDialog')]
+  ]);
+  dialogOpeners.forEach((target, opener) => opener.addEventListener('click', () => openDialog(target, opener)));
+  document.querySelectorAll('.overlay').forEach(dialogOverlay => {
+    dialogOverlay.querySelectorAll('[data-dialog-close]').forEach(button =>
+      button.addEventListener('click', () => closeDialog(dialogOverlay)));
+    dialogOverlay.addEventListener('pointerdown', event => {
+      if (event.target === dialogOverlay) closeDialog(dialogOverlay);
+    });
   });
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) closeDialog();
+  document.getElementById('dlgConfirm').addEventListener('click', () => {
+    closeDialog(document.getElementById('overlay'));
+    showToast('Synthetic force stop requested');
   });
-  document.addEventListener('keydown', e => {
-    if (!overlay.classList.contains('open')) return;
-    if (e.key === 'Escape') { closeDialog(); return; }
-    if (e.key !== 'Tab') return;
-    const f = dlg.querySelectorAll('button:not(:disabled)');
-    const first = f[0], last = f[f.length - 1];
-    if (!dlg.contains(document.activeElement)) { e.preventDefault(); first.focus(); }
-    else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  document.getElementById('generateDemoToken').addEventListener('click', event => {
+    const button = event.currentTarget;
+    const width = button.getBoundingClientRect().width;
+    button.style.width = `${width}px`;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.querySelector('span').innerHTML = '<i class="btn-spinner"></i>Generating';
+    setTimeout(() => {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+      button.style.removeProperty('width');
+      button.querySelector('span').textContent = 'Generate example';
+      showToast('Synthetic token example ready');
+    }, 650);
   });
+  document.addEventListener('keydown', event => {
+    if (!activeOverlay) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDialog();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const controls = [...activeOverlay.querySelectorAll(focusableSelector)].filter(el => el.offsetParent !== null);
+    if (!controls.length) return;
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  // PasswordInput
+  document.querySelectorAll('.password-toggle').forEach(button => {
+    button.addEventListener('click', () => {
+      const input = document.getElementById(button.getAttribute('aria-controls'));
+      const revealing = input.type === 'password';
+      input.type = revealing ? 'text' : 'password';
+      button.setAttribute('aria-label', revealing ? 'Hide password' : 'Show password');
+      button.setAttribute('aria-pressed', String(revealing));
+    });
+  });
+
+  // Rich listbox: native-grade keyboard contract without adjacent reflow
+  document.querySelectorAll('[data-listbox]').forEach(listbox => {
+    const trigger = listbox.querySelector('.listbox-trigger');
+    const menu = listbox.querySelector('.listbox-menu');
+    const list = menu.querySelector('[role="listbox"]');
+    const options = [...list.querySelectorAll('[role="option"]')];
+    let activeIndex = -1;
+    let typeahead = '';
+    let typeaheadTimer;
+    options.forEach((option, index) => { option.id ||= `${list.id}-option-${index}`; });
+
+    function enabled(index) { return options[index] && options[index].getAttribute('aria-disabled') !== 'true'; }
+    function moveActive(index, direction = 1) {
+      if (!options.length) return;
+      let next = ((index % options.length) + options.length) % options.length;
+      for (let tries = 0; tries < options.length && !enabled(next); tries += 1) {
+        next = (next + direction + options.length) % options.length;
+      }
+      if (!enabled(next)) return;
+      options.forEach(option => option.classList.remove('active'));
+      activeIndex = next;
+      options[activeIndex].classList.add('active');
+      trigger.setAttribute('aria-activedescendant', options[activeIndex].id);
+      options[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+    function positionMenu() {
+      const rect = trigger.getBoundingClientRect();
+      const edge = 8;
+      const below = innerHeight - rect.bottom - edge;
+      const above = rect.top - edge;
+      const opensAbove = below < 190 && above > below;
+      menu.classList.toggle('listbox-menu--down', !opensAbove);
+      menu.classList.toggle('listbox-menu--up', opensAbove);
+      const width = Math.min(Math.max(rect.width, 260), innerWidth - edge * 2);
+      menu.style.width = `${width}px`;
+      menu.style.left = `${Math.max(edge, Math.min(rect.left, innerWidth - width - edge))}px`;
+      list.style.maxHeight = `${Math.max(110, Math.min(230, opensAbove ? above - 6 : below - 6))}px`;
+      // flush attachment: the squared menu edge overlaps the trigger border
+      const height = menu.getBoundingClientRect().height;
+      menu.style.top = `${opensAbove ? Math.max(edge, rect.top - height + 1) : rect.bottom - 1}px`;
+    }
+    function openListbox() {
+      if (listbox.classList.contains('open')) return;
+      document.body.appendChild(menu);
+      listbox.classList.add('open');
+      menu.classList.add('open');
+      trigger.setAttribute('aria-expanded', 'true');
+      const selected = options.findIndex(option => option.getAttribute('aria-selected') === 'true');
+      moveActive(selected >= 0 ? selected : 0);
+      requestAnimationFrame(positionMenu);
+    }
+    function closeListbox() {
+      listbox.classList.remove('open');
+      menu.classList.remove('open');
+      if (menu.parentElement !== listbox) listbox.appendChild(menu);
+      trigger.setAttribute('aria-expanded', 'false');
+      trigger.removeAttribute('aria-activedescendant');
+    }
+    function select(index) {
+      if (!enabled(index)) return;
+      options.forEach((option, optionIndex) => option.setAttribute('aria-selected', String(optionIndex === index)));
+      trigger.querySelector('.listbox-value').textContent = options[index].querySelector('.listbox-option-label').textContent;
+      closeListbox();
+      trigger.focus();
+    }
+    trigger.addEventListener('click', () => listbox.classList.contains('open') ? closeListbox() : openListbox());
+    trigger.addEventListener('keydown', event => {
+      const key = event.key;
+      if (['ArrowDown','ArrowUp','Home','End','Enter',' '].includes(key)) event.preventDefault();
+      const wasOpen = listbox.classList.contains('open');
+      if (!wasOpen && ['ArrowDown','ArrowUp','Home','End','Enter',' '].includes(key)) openListbox();
+      if (!wasOpen && (key === 'Enter' || key === ' ')) return;
+      if (key === 'ArrowDown') moveActive(activeIndex + 1);
+      else if (key === 'ArrowUp') moveActive(activeIndex - 1, -1);
+      else if (key === 'Home') moveActive(0);
+      else if (key === 'End') moveActive(options.length - 1, -1);
+      else if ((key === 'Enter' || key === ' ') && listbox.classList.contains('open')) select(activeIndex);
+      else if (key === 'Escape') { closeListbox(); trigger.focus(); }
+      else if (key === 'Tab') closeListbox();
+      else if (key.length === 1 && /\S/.test(key)) {
+        typeahead += key.toLocaleLowerCase();
+        clearTimeout(typeaheadTimer);
+        typeaheadTimer = setTimeout(() => { typeahead = ''; }, 650);
+        const match = options.findIndex((option, index) => enabled(index) && option.textContent.trim().toLocaleLowerCase().startsWith(typeahead));
+        if (match >= 0) { openListbox(); moveActive(match); }
+      }
+    });
+    options.forEach((option, index) => option.addEventListener('click', () => select(index)));
+    document.addEventListener('pointerdown', event => {
+      if (!listbox.contains(event.target) && !menu.contains(event.target)) closeListbox();
+    });
+    addEventListener('resize', closeListbox);
+    addEventListener('scroll', event => {
+      if (!menu.contains(event.target)) closeListbox();
+    }, true);
+  });
+
+  // Tabs use automatic activation because their local panel switch is immediate.
+  document.querySelectorAll('[data-tabs]').forEach(tablist => {
+    const tabs = [...tablist.querySelectorAll('[role="tab"]')].filter(tab => !tab.disabled);
+    function activate(tab, focus = true) {
+      tabs.forEach(item => {
+        const selected = item === tab;
+        item.setAttribute('aria-selected', String(selected));
+        item.tabIndex = selected ? 0 : -1;
+        const panel = document.getElementById(item.getAttribute('aria-controls'));
+        if (panel) panel.hidden = !selected;
+      });
+      if (focus) tab.focus();
+    }
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activate(tab, false));
+      tab.addEventListener('keydown', event => {
+        let next = null;
+        if (event.key === 'ArrowRight') next = tabs[(index + 1) % tabs.length];
+        if (event.key === 'ArrowLeft') next = tabs[(index - 1 + tabs.length) % tabs.length];
+        if (event.key === 'Home') next = tabs[0];
+        if (event.key === 'End') next = tabs.at(-1);
+        if (next) { event.preventDefault(); activate(next); }
+      });
+    });
+  });
+
+  // CopyValue popover: interactive and intentionally separate from Tooltip.
+  const copyPopover = document.getElementById('copyPopover');
+  const copyPopoverValue = document.getElementById('copyPopoverValue');
+  const copyPopoverTitle = document.getElementById('copyPopoverTitle');
+  const copyPopoverFeedback = document.getElementById('copyPopoverFeedback');
+  let copyPopoverTrigger = null;
+  let copyPopoverCombinedValue = '';
+  function positionCopyPopover() {
+    if (!copyPopoverTrigger) return;
+    const rect = copyPopoverTrigger.getBoundingClientRect();
+    const edge = 8;
+    const popRect = copyPopover.getBoundingClientRect();
+    const left = Math.max(edge, Math.min(rect.left, innerWidth - popRect.width - edge));
+    const below = rect.bottom + 7;
+    const top = below + popRect.height <= innerHeight - edge ? below : Math.max(edge, rect.top - popRect.height - 7);
+    copyPopover.style.left = `${left}px`;
+    copyPopover.style.top = `${top}px`;
+  }
+  function closeCopyPopover(restore = false) {
+    if (!copyPopoverTrigger) return;
+    document.removeEventListener('pointermove', closePinnedOnExit);
+    const trigger = copyPopoverTrigger;
+    trigger.setAttribute('aria-expanded', 'false');
+    copyPopover.classList.remove('open');
+    copyPopoverFeedback.textContent = '';
+    copyPopoverTrigger = null;
+    if (restore) trigger.focus();
+  }
+  document.querySelectorAll('.copy-value-trigger,[data-copy-items]').forEach(trigger => {
+    trigger.setAttribute('aria-haspopup', 'dialog');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', 'copyPopover');
+  });
+  document.addEventListener('click', event => {
+    const trigger = event.target.closest('.copy-value-trigger,[data-copy-items]');
+    if (!trigger) return;
+    if (copyPopoverTrigger === trigger) { closeCopyPopover(true); return; }
+    closeCopyPopover();
+    hideTip();
+    copyPopoverTrigger = trigger;
+    trigger.setAttribute('aria-expanded', 'true');
+    if (trigger.dataset.copyItems) document.addEventListener('pointermove', closePinnedOnExit);
+    const items = trigger.dataset.copyItems ? JSON.parse(trigger.dataset.copyItems) :
+      [[trigger.dataset.copyLabel || 'value', trigger.dataset.copyValue]];
+    copyPopoverTitle.textContent = trigger.dataset.copyItems ? 'Pinned values' : (trigger.dataset.copyLabel || 'Complete value');
+    copyPopoverCombinedValue = items.map(([, value]) => value).join('\n');
+    copyPopoverValue.replaceChildren(...items.map(([label, value]) => {
+      const row = document.createElement('div');
+      const text = document.createElement('span');
+      const button = document.createElement('button');
+      row.className = 'copy-popover-line';
+      text.className = 'copy-popover-line-value';
+      text.textContent = `${label}: ${value}`;
+      button.className = 'copy-line-button';
+      button.type = 'button';
+      button.setAttribute('aria-label', `Copy ${label}`);
+      button.title = `Copy ${label}`;
+      button.addEventListener('click', async () => {
+        try {
+          await copyText(value);
+          copyPopoverFeedback.textContent = `${label} copied`;
+        } catch {
+          copyPopoverFeedback.textContent = `Copy failed — select ${label} manually`;
+        }
+      });
+      row.append(text, button);
+      return row;
+    }));
+    copyPopover.querySelector('.copy-popover-copy span').textContent = items.length > 1 ? 'Copy all values' : 'Copy complete value';
+    copyPopover.classList.add('open');
+    requestAnimationFrame(() => { positionCopyPopover(); copyPopover.focus(); });
+  });
+  copyPopover.querySelector('.copy-popover-copy').addEventListener('click', async () => {
+    try {
+      await copyText(copyPopoverCombinedValue);
+      copyPopoverFeedback.textContent = 'Copied';
+    } catch {
+      copyPopoverFeedback.textContent = 'Copy failed — select the value above';
+      copyPopoverValue.setAttribute('tabindex', '0');
+      copyPopoverValue.focus();
+    }
+  });
+  document.addEventListener('pointerdown', event => {
+    if (copyPopoverTrigger && !copyPopover.contains(event.target) && !copyPopoverTrigger.contains(event.target)) closeCopyPopover();
+  });
+  // registered only while a pinned popover is open, so idle pointer moves cost nothing
+  function closePinnedOnExit(event) {
+    if (!copyPopoverTrigger) return;
+    const triggerRect = copyPopoverTrigger.getBoundingClientRect();
+    const popoverRect = copyPopover.getBoundingClientRect();
+    const pad = 10;
+    const insidePinnedRegion = event.clientX >= Math.min(triggerRect.left, popoverRect.left) - pad &&
+      event.clientX <= Math.max(triggerRect.right, popoverRect.right) + pad &&
+      event.clientY >= Math.min(triggerRect.top, popoverRect.top) - pad &&
+      event.clientY <= Math.max(triggerRect.bottom, popoverRect.bottom) + pad;
+    if (!insidePinnedRegion) closeCopyPopover();
+  }
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && copyPopoverTrigger) { event.preventDefault(); closeCopyPopover(true); }
+  });
+  addEventListener('resize', () => copyPopoverTrigger && positionCopyPopover());
+  addEventListener('scroll', () => closeCopyPopover(), true);
+
+  document.querySelectorAll('.copy-static').forEach(button => button.addEventListener('click', async () => {
+    const target = document.getElementById(button.dataset.copyTarget);
+    const value = target.dataset.secret || target.textContent;
+    const status = button.closest('.secret-value')?.querySelector('[role="status"]');
+    try {
+      await copyText(value.trim());
+      if (status) status.textContent = 'Copied synthetic value.';
+      else showToast('Copied synthetic value');
+    } catch {
+      if (status) status.textContent = 'Copy failed — select the value manually.';
+      else showToast('Copy failed — select the value manually');
+    }
+  }));
+  document.querySelectorAll('.secret-toggle').forEach(button => button.addEventListener('click', () => {
+    const value = button.closest('.secret-value').querySelector('.secret-text');
+    const revealed = button.getAttribute('aria-pressed') !== 'true';
+    button.setAttribute('aria-pressed', String(revealed));
+    button.querySelector('span').textContent = revealed ? 'Mask' : 'Reveal';
+    value.textContent = revealed ? value.dataset.secret : '••••••••••••••••••••••••••••••••';
+  }));
+
+  // ProgressiveReveal preserves the initial rows and disables duplicate requests.
+  (function () {
+    const body = document.getElementById('invocationsBody');
+    const load = document.getElementById('loadInvocations');
+    const collapse = document.getElementById('collapseInvocations');
+    const status = document.getElementById('invocationsRevealStatus');
+    const makeRow = (index, retained = false) => {
+      const row = document.createElement('tr');
+      if (retained) row.dataset.revealed = 'true';
+      const harness = index % 2 ? 'claude' : 'codex';
+      row.innerHTML = `<td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_retained_${String(index).padStart(8,'0')}">job_demo…${String(index).padStart(4,'0')}</button></td><td class="mono">${harness}</td><td>demo-${String(index).padStart(2,'0')}</td><td>code-review</td><td class="numeric">${index % 3 + 1}</td><td class="numeric">600s</td><td class="numeric">—</td><td><span class="chamfer badge badge--yellow"><span>Paused</span></span></td><td class="mono">10:43:${String(index).padStart(2,'0')}</td><td><button class="chamfer btn btn--muted btn--small" type="button"><span>Inspect</span></button></td>`;
+      const copyTrigger = row.querySelector('.copy-value-trigger');
+      copyTrigger.setAttribute('aria-haspopup', 'dialog');
+      copyTrigger.setAttribute('aria-expanded', 'false');
+      copyTrigger.setAttribute('aria-controls', 'copyPopover');
+      return row;
+    };
+    for (let index = 4; index <= 6; index += 1) body.appendChild(makeRow(index));
+    load.addEventListener('click', () => {
+      const width = load.getBoundingClientRect().width;
+      load.style.width = `${width}px`;
+      load.disabled = true;
+      load.setAttribute('aria-busy', 'true');
+      load.querySelector('span').innerHTML = '<i class="btn-spinner"></i>Loading';
+      status.textContent = 'Loading retained synthetic jobs…';
+      setTimeout(() => {
+        for (let index = 7; index <= 26; index += 1) body.appendChild(makeRow(index, true));
+        load.querySelector('span').textContent = 'All rows loaded';
+        load.removeAttribute('aria-busy');
+        load.style.removeProperty('width');
+        collapse.hidden = false;
+        status.textContent = '26 shown · last page';
+      }, 450);
+    });
+    collapse.addEventListener('click', () => {
+      body.querySelectorAll('[data-revealed]').forEach(row => row.remove());
+      collapse.hidden = true;
+      load.disabled = false;
+      load.querySelector('span').textContent = 'Load 20 more';
+      status.textContent = '6 shown · 20 retained';
+    });
+  })();
 
   // workflow diagram edges
   (function () {
@@ -1505,24 +3629,40 @@
   // workflow zoom + summary jump links
   (function () {
     const stage = document.getElementById('wfStage');
-    const scroll = stage.parentElement;
+    const sizer = stage.parentElement;
+    const scroll = sizer.parentElement;
     const resetBtn = document.getElementById('wfZoomReset');
+    const baseWidth = stage.offsetWidth;
+    const baseHeight = stage.offsetHeight;
     let zoom = 1;
+    // transform keeps zoom off the layout path; the sizer supplies the
+    // scaled scroll extent the transform alone would not create
     function setZoom(z) {
-      zoom = Math.min(2, Math.max(0.4, z));
-      stage.style.zoom = zoom;
+      const nextZoom = Math.min(2, Math.max(0.4, z));
+      const focusX = (scroll.scrollLeft + scroll.clientWidth / 2 - sizer.offsetLeft) / zoom;
+      const focusY = (scroll.scrollTop + scroll.clientHeight / 2 - sizer.offsetTop) / zoom;
+      zoom = nextZoom;
+      stage.style.transform = `scale(${zoom})`;
+      sizer.style.width = `${baseWidth * zoom}px`;
+      sizer.style.height = `${baseHeight * zoom}px`;
+      scroll.scrollLeft = sizer.offsetLeft + focusX * zoom - scroll.clientWidth / 2;
+      scroll.scrollTop = sizer.offsetTop + focusY * zoom - scroll.clientHeight / 2;
       resetBtn.querySelector('span').textContent = Math.round(zoom * 100) + '%';
     }
     document.getElementById('wfZoomOut').addEventListener('click', () => setZoom(zoom - 0.1));
     document.getElementById('wfZoomIn').addEventListener('click', () => setZoom(zoom + 0.1));
     resetBtn.addEventListener('click', () => setZoom(1));
     document.getElementById('wfZoomFit').addEventListener('click', () =>
-      setZoom((scroll.clientWidth - 20) / stage.offsetWidth));
+      setZoom((scroll.clientWidth - 20) / baseWidth));
     document.querySelectorAll('.wf-jump').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
         const node = document.getElementById(a.dataset.jump);
-        node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        scroll.scrollTo({
+          left: sizer.offsetLeft + (node.offsetLeft + node.offsetWidth / 2) * zoom - scroll.clientWidth / 2,
+          top: sizer.offsetTop + (node.offsetTop + node.offsetHeight / 2) * zoom - scroll.clientHeight / 2,
+          behavior: scrollBehavior()
+        });
         node.classList.remove('wf-flash');
         void node.offsetWidth;
         node.classList.add('wf-flash');
@@ -1530,35 +3670,168 @@
     });
   })();
 
-  // tooltip
-  const tip = document.getElementById('uiTip');
-  const tipText = tip.querySelector('span');
-  function placeTip(cx, cy) {
-    const pad = 14;
-    const r = tip.getBoundingClientRect();
-    let x = cx + pad, y = cy + pad;
-    if (x + r.width > innerWidth - 8) x = cx - r.width - pad;
-    if (y + r.height > innerHeight - 8) y = cy - r.height - pad;
-    tip.style.left = x + 'px';
-    tip.style.top = y + 'px';
-  }
-  function showTip(el, cx, cy) {
-    tipText.textContent = el.dataset.tip;
-    tip.classList.add('show');
-    placeTip(cx, cy);
-  }
-  const hideTip = () => tip.classList.remove('show');
-  document.querySelectorAll('[data-tip]').forEach(el => {
-    if (!el.hasAttribute('tabindex') && !el.matches('a,button,input')) el.tabIndex = 0;
-    el.addEventListener('mouseenter', e => showTip(el, e.clientX, e.clientY));
-    el.addEventListener('mousemove', e => placeTip(e.clientX, e.clientY));
-    el.addEventListener('mouseleave', hideTip);
-    el.addEventListener('focus', () => {
-      const r = el.getBoundingClientRect();
-      showTip(el, r.left, r.bottom);
+  // Accessible high-DPI synthetic stream plot with pointer and keyboard cursor.
+  (function () {
+    const canvas = document.getElementById('streamPlot');
+    const cursorOutput = document.getElementById('plotCursor');
+    const pad = { left: 46, right: 18, top: 18, bottom: 34 };
+    const liveX = 0.18;
+    let cursorX = 0;
+    let drawQueued = false;
+    const valueAt = x => 100 + 4.2 * x + 1.8 * x * x * x;
+    const rootStyle = getComputedStyle(document.documentElement);
+    const color = name => rootStyle.getPropertyValue(name).trim();
+    function draw() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(rect.width * ratio));
+      const height = Math.max(1, Math.round(rect.height * ratio));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      const w = rect.width;
+      const h = rect.height;
+      const xToPx = x => pad.left + (x + 1) / 2 * (w - pad.left - pad.right);
+      const yToPx = y => pad.top + (106 - y) / 12 * (h - pad.top - pad.bottom);
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = color('--border');
+      ctx.fillStyle = color('--text-muted');
+      ctx.lineWidth = 1;
+      ctx.font = '11px ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      [-1, -.5, 0, .5, 1].forEach(x => {
+        const px = xToPx(x);
+        ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, h - pad.bottom); ctx.stroke();
+        ctx.fillText(x.toFixed(1), px, h - 12);
+      });
+      ctx.textAlign = 'right';
+      [94, 100, 106].forEach(y => {
+        const py = yToPx(y);
+        ctx.beginPath(); ctx.moveTo(pad.left, py); ctx.lineTo(w - pad.right, py); ctx.stroke();
+        ctx.fillText(String(y), pad.left - 7, py + 4);
+      });
+      function curve(color, offset) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let step = 0; step <= 120; step += 1) {
+          const x = -1 + step / 60;
+          const px = xToPx(x);
+          const py = yToPx(valueAt(x) + offset);
+          if (step === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      curve(color('--green'), -0.35);
+      curve(color('--red'), 0.35);
+      function marker(x, color, dashed = false) {
+        const px = xToPx(x);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash(dashed ? [4, 4] : []);
+        ctx.beginPath(); ctx.moveTo(px, pad.top); ctx.lineTo(px, h - pad.bottom); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(px, yToPx(valueAt(x)), 4, 0, Math.PI * 2); ctx.fill();
+      }
+      marker(liveX, color('--cyan'));
+      marker(cursorX, color('--purple'), true);
+      cursorOutput.textContent = `${cursorX.toFixed(2)} / ${valueAt(cursorX).toFixed(2)}`;
+    }
+    // pointer moves outpace the display; coalesce redraws to one per frame
+    function queueDraw() {
+      if (drawQueued) return;
+      drawQueued = true;
+      requestAnimationFrame(() => { drawQueued = false; draw(); });
+    }
+    function setCursor(value) {
+      cursorX = Math.max(-1, Math.min(1, value));
+      queueDraw();
+    }
+    canvas.addEventListener('pointermove', event => {
+      const rect = canvas.getBoundingClientRect();
+      setCursor(((event.clientX - rect.left - pad.left) / (rect.width - pad.left - pad.right)) * 2 - 1);
     });
-    el.addEventListener('blur', hideTip);
+    canvas.addEventListener('keydown', event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === 'Home') setCursor(-1);
+      else if (event.key === 'End') setCursor(1);
+      else setCursor(cursorX + (event.key === 'ArrowRight' ? .05 : -.05));
+    });
+    draw();
+    if ('ResizeObserver' in window) new ResizeObserver(queueDraw).observe(canvas);
+    else addEventListener('resize', queueDraw);
+  })();
+
+  // Tooltip remains noninteractive; CopyValue owns every interactive copy surface.
+  const tip = document.getElementById('uiTip');
+  const tipLines = tip.querySelector('.ui-tip-lines');
+  let activeTipTarget = null;
+  let tipTimer;
+  let tipPointerX = 0;
+  let tipPointerY = 0;
+  let tipFollowFrame = 0;
+  function positionTip(x, y) {
+    const edge = 8;
+    const gap = 12;
+    const rect = tip.getBoundingClientRect();
+    let left = x + gap;
+    let top = y + gap;
+    if (left + rect.width > innerWidth - edge) left = x - rect.width - gap;
+    if (top + rect.height > innerHeight - edge) top = y - rect.height - gap;
+    tip.style.left = `${Math.max(edge, left)}px`;
+    tip.style.top = `${Math.max(edge, top)}px`;
+    tip.classList.add('positioned');
+  }
+  function showTip(target, x, y) {
+    clearTimeout(tipTimer);
+    activeTipTarget = target;
+    tipLines.textContent = target.dataset.tooltip;
+    target.setAttribute('aria-describedby', 'uiTip');
+    tip.classList.add('show');
+    tip.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => positionTip(x, y));
+  }
+  function queueTip(target, x, y) {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => showTip(target, x, y), 280);
+  }
+  function hideTip(target = activeTipTarget) {
+    clearTimeout(tipTimer);
+    target?.removeAttribute('aria-describedby');
+    activeTipTarget = null;
+    tip.classList.remove('show', 'positioned');
+    tip.setAttribute('aria-hidden', 'true');
+  }
+  document.querySelectorAll('[data-tooltip]').forEach(target => {
+    target.addEventListener('mouseenter', event => queueTip(target, event.clientX, event.clientY));
+    target.addEventListener('mousemove', event => {
+      if (activeTipTarget !== target) return;
+      tipPointerX = event.clientX;
+      tipPointerY = event.clientY;
+      // coalesce pointer-follow repositioning to one layout read per frame
+      if (tipFollowFrame) return;
+      tipFollowFrame = requestAnimationFrame(() => {
+        tipFollowFrame = 0;
+        if (activeTipTarget) positionTip(tipPointerX, tipPointerY);
+      });
+    });
+    target.addEventListener('mouseleave', () => hideTip(target));
+    target.addEventListener('focus', () => {
+      const rect = target.getBoundingClientRect();
+      queueTip(target, rect.left + rect.width / 2, rect.bottom);
+    });
+    target.addEventListener('blur', () => hideTip(target));
   });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && activeTipTarget) hideTip();
+  });
+  addEventListener('resize', () => hideTip());
+  addEventListener('scroll', () => hideTip(), true);
 </script>
 
 </body>
