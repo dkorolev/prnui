@@ -1503,6 +1503,135 @@
   .tip-target:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
   .tooltip-sentence { font-size: 0.9rem; }
 
+  /* ── docked inspector ── */
+  .inspect-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    gap: 12px;
+    align-items: stretch;
+  }
+  .inspect-surface {
+    min-width: 0;
+    min-height: 320px;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    border: 1px solid var(--border);
+    background:
+      linear-gradient(rgba(88,166,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(88,166,255,.04) 1px, transparent 1px),
+      var(--surface-deep);
+    background-size: 28px 28px;
+  }
+  .inspect-targets {
+    width: min(100%, 480px);
+    display: grid;
+    gap: 10px;
+  }
+  .inspect-target {
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    color: var(--text);
+    background: var(--surface);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .inspect-target:hover,
+  .inspect-target:focus-visible,
+  .inspect-target[aria-pressed='true'] {
+    border-color: var(--cyan);
+    outline: none;
+    box-shadow: inset 3px 0 var(--cyan);
+  }
+  .inspect-target-kicker {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--cyan);
+    font: 600 .64rem/1.2 var(--font-mono);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+  }
+  .inspect-target-detail { display: block; color: var(--text-muted); font-size: .72rem; }
+
+  .inspector {
+    --cut: 10px;
+    --bw: 1px;
+    min-width: 0;
+    min-height: 320px;
+    overflow: auto;
+    background: var(--border);
+    scrollbar-gutter: stable;
+  }
+  .inspector::before { background: var(--surface-deep); }
+  .inspector[data-pinned='true'] { background: var(--yellow); }
+  .inspector-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 11px 9px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-raised);
+  }
+  .inspector-state {
+    color: var(--text-muted);
+    font: 600 .66rem/1.2 var(--font-mono);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .inspector[data-pinned='true'] .inspector-state { color: var(--yellow); }
+  .inspector-clear {
+    width: 30px;
+    height: 28px;
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    background: var(--surface);
+    font: 700 .76rem/1 var(--font-mono);
+    cursor: pointer;
+  }
+  .inspector-clear:hover,
+  .inspector-clear:focus-visible { border-color: var(--cyan); color: var(--text); outline: none; }
+  .inspector-clear:disabled { opacity: .35; cursor: default; }
+  .inspector-body {
+    position: relative;
+    z-index: 1;
+    padding: 14px;
+    color: var(--text);
+    font-size: .8rem;
+    user-select: text;
+    overflow-wrap: anywhere;
+  }
+  .inspector-empty {
+    min-height: 230px;
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+    font: .74rem/1.5 var(--font-mono);
+    text-align: center;
+  }
+  .inspector-title { margin-bottom: 10px; font-size: .92rem; font-weight: 650; }
+  .inspector-title a { color: var(--cyan); }
+  .inspector-facts { display: grid; grid-template-columns: 74px minmax(0, 1fr); border-top: 1px solid var(--border); }
+  .inspector-facts dt,
+  .inspector-facts dd { min-width: 0; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .inspector-facts dt { color: var(--text-muted); font: 600 .64rem/1.45 var(--font-mono); text-transform: uppercase; }
+  .inspector-facts dd { margin: 0; }
+  .inspector-note { margin-top: 10px; color: var(--text-muted); font-size: .7rem; }
+
+  @media (max-width: 760px) {
+    .inspect-layout { grid-template-columns: 1fr; }
+    .inspector { grid-row: 1; min-height: 210px; max-height: 260px; }
+    .inspect-surface { grid-row: 2; min-height: 280px; }
+    .inspector-empty { min-height: 120px; }
+  }
+
   /* ── Dise migration component extensions ── */
   .sr-only {
     position: absolute;
@@ -2739,8 +2868,27 @@
     <div class="panel"><p>Job <button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_01J4SYNTHETIC8M2Q7K">job_demo_01J4…Q7K</button> · Exact duration <button class="copy-value-trigger mono" type="button" data-copy-label="Exact synthetic duration" data-copy-value="1234.567890123456 ms">1,234.57 ms</button> · Session <button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic session ID" data-copy-value="session_demo_7Q2F9M4K8P1N6D3R5T0V">session_demo_7Q2F…T0V</button></p></div>
   </section>
 
+  <!-- Docked detail surface: large or interactive content never covers its source -->
+  <section class="chamfer card card--accent-left accent-yellow" id="component-inspector" data-component="Inspector DockedInspector" data-section-ref="23">
+    <p class="section-label">Docked Inspector</p>
+    <p class="demo-note">Use an Inspector—not a Tooltip—for structured, selectable, or link-bearing detail. Its layout space is always reserved: hover or focus previews, click pins, and Escape or Clear releases it.</p>
+    <div class="inspect-layout" data-inspector-demo>
+      <div class="inspect-surface">
+        <div class="inspect-targets">
+          <button class="inspect-target" type="button" aria-pressed="false" data-inspect-title="Compile route" data-inspect-kind="Worker" data-inspect-source="src/routes/compile.ts:118" data-inspect-detail="codex · code-review · 42 completed invocations" data-inspect-href="#component-code"><span class="inspect-target-kicker">Worker route</span><strong>Compile and review</strong><span class="inspect-target-detail">42 completed · source available</span></button>
+          <button class="inspect-target" type="button" aria-pressed="false" data-inspect-title="Retained event stream" data-inspect-kind="Stream" data-inspect-source="jobs.events" data-inspect-detail="12,480 retained events · latest age 180ms" data-inspect-href="#component-disclosure"><span class="inspect-target-kicker">Observed data</span><strong>jobs.events</strong><span class="inspect-target-detail">12,480 retained · current</span></button>
+          <button class="inspect-target" type="button" aria-pressed="false" data-inspect-title="Read-only capability" data-inspect-kind="Permission" data-inspect-source="capability_demo_observer" data-inspect-detail="jobs:read · results:read · no mutation scopes" data-inspect-href="#component-checkbox"><span class="inspect-target-kicker">Capability</span><strong>Observer access</strong><span class="inspect-target-detail">read-only · 2 scopes</span></button>
+        </div>
+      </div>
+      <aside class="chamfer inspector" role="region" aria-label="Selected target details" data-pinned="false">
+        <div class="inspector-head"><span class="inspector-state">Nothing selected</span><button class="inspector-clear" type="button" aria-label="Clear inspector" disabled>×</button></div>
+        <div class="inspector-body"><div class="inspector-empty">Hover or focus a target to preview it.<br>Click the target to keep these details pinned.</div></div>
+      </aside>
+    </div>
+  </section>
+
   <!-- Dise migration: DataTable and reveal -->
-  <section class="chamfer card card--accent-left accent-green" id="component-table" data-component="DataTable ProgressiveReveal" data-section-ref="23">
+  <section class="chamfer card card--accent-left accent-green" id="component-table" data-component="DataTable ProgressiveReveal" data-section-ref="24">
     <p class="section-label">DataTable &amp; ProgressiveReveal</p>
     <div class="data-table-viewport" tabindex="0" aria-label="Synthetic invocation routes table, horizontally scrollable"><table class="data-table data-table--dense"><caption class="sr-only">Synthetic invocation routes</caption><thead><tr><th scope="col">Invocation</th><th scope="col">Harness</th><th scope="col">Model</th><th scope="col">Profile</th><th scope="col">Attempts</th><th scope="col">Budget</th><th scope="col">Result</th><th scope="col">Status</th><th scope="col">Started</th><th scope="col">Action</th></tr></thead><tbody id="invocationsBody"><tr class="row--current"><td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_current_00000001">job_demo…0001</button></td><td class="mono">codex</td><td>gpt-5</td><td>code-review</td><td class="numeric">1</td><td class="numeric">900s</td><td class="mono">review.json</td><td><span class="chamfer badge badge--green"><span>Complete</span></span></td><td class="mono">10:41:12</td><td><button class="chamfer btn btn--muted btn--small" type="button"><span>Inspect</span></button></td></tr><tr class="row--running"><td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_running_00000002">job_demo…0002</button></td><td class="mono">claude</td><td>sonnet</td><td>commit-summary</td><td class="numeric">1</td><td class="numeric">600s</td><td class="numeric">—</td><td><span class="chamfer badge badge--purple"><span>Running</span></span></td><td class="mono">10:42:03</td><td><button class="chamfer btn btn--red btn--small" type="button"><span>Stop</span></button></td></tr><tr class="row--failed"><td><button class="copy-value-trigger mono" type="button" data-copy-label="Synthetic job ID" data-copy-value="job_demo_failed_00000003">job_demo…0003</button></td><td class="mono">opencode</td><td>glm-demo</td><td>audit</td><td class="numeric">3</td><td class="numeric">480s</td><td class="numeric">—</td><td><span class="chamfer badge badge--red"><span>Failed</span></span></td><td class="mono">10:42:18</td><td><button class="chamfer btn btn--muted btn--small" type="button"><span>Retry</span></button></td></tr></tbody></table></div>
     <div class="progressive-reveal"><button class="chamfer btn btn--cyan btn--small" id="loadInvocations" type="button"><span>Load 20 more</span></button><button class="btn btn--ghost btn--small" id="collapseInvocations" type="button" hidden><span>Collapse</span></button><span class="inline-message" id="invocationsRevealStatus" role="status">6 shown · 20 retained</span></div>
@@ -2752,7 +2900,7 @@
   </section>
 
   <!-- Dise migration: Event log -->
-  <section class="chamfer card card--accent-left accent-orange" id="component-disclosure" data-component="Disclosure EventLogRow" data-section-ref="24">
+  <section class="chamfer card card--accent-left accent-orange" id="component-disclosure" data-component="Disclosure EventLogRow" data-section-ref="25">
     <p class="section-label">Disclosure &amp; EventLogRow</p>
     <div class="event-log" aria-label="Synthetic event log">
       <details class="event-row"><summary class="event-summary"><time class="event-time">10:40:01</time><span class="event-age">2m ago</span><span class="event-gap" aria-label="First visible event"></span><span class="event-type">Normal</span><span class="event-summary-text">Synthetic daemon connected to the observation stream.</span><span class="event-caret">▶</span></summary><div class="event-detail"><pre class="event-json">{"event":"demo.connected","stream":"synthetic"}</pre></div></details>
@@ -2768,7 +2916,7 @@
   </section>
 
   <!-- Dise migration: Code and secrets -->
-  <section class="chamfer card card--accent-left accent-purple" id="component-code" data-component="CodeBlock SecretValue" data-section-ref="25">
+  <section class="chamfer card card--accent-left accent-purple" id="component-code" data-component="CodeBlock SecretValue" data-section-ref="26">
     <p class="section-label">CodeBlock &amp; SecretValue</p>
     <div class="code-block code-block--wrap"><div class="code-block-head"><span>Synthetic JSON response</span><button class="chamfer btn btn--muted btn--small copy-static" type="button" data-copy-target="demoJson"><span>Copy JSON</span></button></div><pre class="code-block-body" id="demoJson">{
   "repository": "repo_demo_alpha",
@@ -2779,7 +2927,7 @@
   </section>
 
   <!-- Dise migration: Plot -->
-  <section class="chamfer card card--accent-left accent-magenta" id="component-plot" data-component="Plot" data-section-ref="26">
+  <section class="chamfer card card--accent-left accent-magenta" id="component-plot" data-component="Plot" data-section-ref="27">
     <p class="section-label">Plot</p>
     <div class="plot-legend"><span class="plot-key plot-key--input">Published rate</span><span class="plot-key plot-key--output">Applied rate</span><span class="plot-key plot-key--live">Live sample</span></div>
     <div class="plot-shell"><canvas class="plot-canvas" id="streamPlot" tabindex="0" role="img" aria-label="Synthetic stream throughput curve" aria-describedby="plotSummary"></canvas><div class="plot-summary" id="plotSummary" aria-live="polite"><span>Window <strong>−1.00…1.00</strong></span><span>Live <strong id="plotLive">0.18 / 101.26</strong></span><span>Cursor <strong id="plotCursor">0.00 / 100.00</strong></span></div></div>
@@ -2787,7 +2935,7 @@
   </section>
 
   <!-- Dise migration: App shell -->
-  <section class="chamfer card card--accent-top accent-cyan" id="component-shell" data-component="AppShell StickyChrome" data-section-ref="27">
+  <section class="chamfer card card--accent-top accent-cyan" id="component-shell" data-component="AppShell StickyChrome" data-section-ref="28">
     <p class="section-label">AppShell &amp; StickyChrome</p>
     <div class="app-shell-demo">
       <div class="app-shell-status"><span class="connection-status"><span class="dot dot--live"></span><span class="connection-label">Synthetic daemon online</span></span><span class="mono">up 3d 14h</span></div>
@@ -2810,14 +2958,14 @@
   </section>
 
   <!-- Dise migration: Cross-component states -->
-  <section class="chamfer card card--accent-left accent-yellow" id="component-states" data-component="Empty Loading Error Stale Responsive Focus" data-section-ref="28">
+  <section class="chamfer card card--accent-left accent-yellow" id="component-states" data-component="Empty Loading Error Stale Responsive Focus" data-section-ref="29">
     <p class="section-label">Cross-component states &amp; responsive contract</p>
     <div class="table-scroll"><table class="state-matrix"><thead><tr><th>Component</th><th>Empty</th><th>Loading</th><th>Error</th><th>Stale</th></tr></thead><tbody><tr><td>Card</td><td>Named absence</td><td class="state-chip--loading">Skeleton</td><td class="state-chip--error">Callout</td><td class="state-chip--stale">Age retained</td></tr><tr><td>Select</td><td>No options</td><td class="state-chip--loading">Trigger busy</td><td class="state-chip--error">InlineMessage</td><td>Last value labeled</td></tr><tr><td>DataTable</td><td>Colspan message</td><td class="state-chip--loading">Stable rows</td><td class="state-chip--error">Rows preserved</td><td class="state-chip--stale">Timestamped</td></tr><tr><td>EventLog</td><td>No events</td><td class="state-chip--loading">Existing open rows</td><td class="state-chip--error">Retry detail</td><td class="state-chip--stale">Ages continue</td></tr><tr><td>Plot</td><td>No series</td><td class="state-chip--loading">Viewport reserved</td><td class="state-chip--error">Text alternative</td><td class="state-chip--stale">Marker labeled</td></tr><tr><td>Dialog</td><td>Result absent</td><td class="state-chip--loading">Local action</td><td class="state-chip--error">Full message</td><td>Existing result kept</td></tr><tr><td>ScopeSwitcher</td><td>No routes</td><td class="state-chip--loading">Selection retained</td><td class="state-chip--error">Unavailable reason</td><td class="state-chip--stale">Running route distinct</td></tr></tbody></table></div>
     <div class="state-gallery"><div class="state-sample"><p class="state-sample-label">Keyboard focus</p><button class="chamfer btn btn--cyan focus-demo" type="button"><span>Visible focus target</span></button></div><div class="state-sample"><p class="state-sample-label">Reduced motion</p><p class="inline-message">Decorative motion stops under <span class="mono">prefers-reduced-motion</span>; state remains textual.</p></div><div class="state-sample"><p class="state-sample-label">Narrow screens</p><p class="inline-message">Tables and secondary navigation scroll within bounded regions below 520px.</p></div></div>
   </section>
 
   <!-- Dialog & toast -->
-  <div class="chamfer card card--accent-left accent-orange" data-section-ref="29">
+  <div class="chamfer card card--accent-left accent-orange" data-section-ref="30">
     <p class="section-label">Dialog &amp; toast</p>
     <div class="btn-row">
       <button class="chamfer btn btn--red" id="openDialog"><span>Force stop&hellip;</span></button>
@@ -2827,7 +2975,7 @@
   </div>
 
   <!-- Tooltip: noninteractive supplementary information -->
-  <div class="chamfer card card--accent-left accent-cyan" data-section-ref="30">
+  <div class="chamfer card card--accent-left accent-cyan" data-section-ref="31">
     <p class="section-label">Tooltip</p>
     <p class="tooltip-sentence">
       Job <button class="tip-target mono" type="button" data-tooltip="Synthetic job j-4f2a9c&#10;branch: main&#10;profile: code-review" data-copy-items="[[&quot;job&quot;,&quot;j-4f2a9c&quot;],[&quot;branch&quot;,&quot;main&quot;],[&quot;profile&quot;,&quot;code-review&quot;]]">j-4f2a9c</button>
@@ -3767,7 +3915,75 @@
     else addEventListener('resize', queueDraw);
   })();
 
-  // Tooltip remains noninteractive; CopyValue owns every interactive copy surface.
+  // Inspector owns reserved layout space for interactive, selectable detail.
+  document.querySelectorAll('[data-inspector-demo]').forEach(root => {
+    const inspector = root.querySelector('.inspector');
+    const inspectorState = inspector.querySelector('.inspector-state');
+    const inspectorBody = inspector.querySelector('.inspector-body');
+    const clearButton = inspector.querySelector('.inspector-clear');
+    const targets = [...root.querySelectorAll('.inspect-target')];
+    let pinnedTarget = null;
+
+    function clearInspector() {
+      pinnedTarget?.setAttribute('aria-pressed', 'false');
+      pinnedTarget = null;
+      inspector.dataset.pinned = 'false';
+      inspectorState.textContent = 'Nothing selected';
+      clearButton.disabled = true;
+      const empty = document.createElement('div');
+      empty.className = 'inspector-empty';
+      empty.innerHTML = 'Hover or focus a target to preview it.<br>Click the target to keep these details pinned.';
+      inspectorBody.replaceChildren(empty);
+    }
+
+    function showInspector(target, pin = false) {
+      if (pinnedTarget && !pin) return;
+      pinnedTarget?.setAttribute('aria-pressed', 'false');
+      pinnedTarget = pin ? target : null;
+      target.setAttribute('aria-pressed', String(pin));
+      inspector.dataset.pinned = String(pin);
+      inspectorState.textContent = pin ? 'Pinned · Escape to release' : 'Preview · click to pin';
+      clearButton.disabled = false;
+
+      const title = document.createElement('div');
+      title.className = 'inspector-title';
+      const link = document.createElement('a');
+      link.href = target.dataset.inspectHref;
+      link.textContent = target.dataset.inspectTitle;
+      title.append(link);
+      const facts = document.createElement('dl');
+      facts.className = 'inspector-facts';
+      for (const [label, value] of [
+        ['Kind', target.dataset.inspectKind],
+        ['Source', target.dataset.inspectSource],
+        ['Detail', target.dataset.inspectDetail],
+      ]) {
+        const term = document.createElement('dt');
+        const description = document.createElement('dd');
+        term.textContent = label;
+        description.textContent = value;
+        facts.append(term, description);
+      }
+      const note = document.createElement('p');
+      note.className = 'inspector-note';
+      note.textContent = pin
+        ? 'Pinned details stay selectable and linked until Clear or Escape.'
+        : 'Preview is stable in this reserved panel. Click the target to pin it.';
+      inspectorBody.replaceChildren(title, facts, note);
+    }
+
+    targets.forEach(target => {
+      target.addEventListener('mouseenter', () => showInspector(target));
+      target.addEventListener('focus', () => showInspector(target));
+      target.addEventListener('click', () => showInspector(target, true));
+    });
+    clearButton.addEventListener('click', clearInspector);
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && pinnedTarget) clearInspector();
+    });
+  });
+
+  // Tooltip remains noninteractive; CopyValue and Inspector own interactive detail surfaces.
   const tip = document.getElementById('uiTip');
   const tipLines = tip.querySelector('.ui-tip-lines');
   let activeTipTarget = null;
