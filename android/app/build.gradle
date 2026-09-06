@@ -1,0 +1,76 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.dkorolev.prnui'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'io.github.dkorolev.prnui'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Package only the specimen and its icon, never the repository or build tools.
+def webAssets = tasks.register('syncWebAssets', Sync) {
+    from(rootProject.projectDir.parentFile) {
+        include 'prnui.html', 'favicon.svg'
+    }
+    into layout.buildDirectory.dir('generated/webAssets')
+}
+
+// The browser favicon is the source for both launcher and themed icons.
+def launcherIcons = tasks.register('generateLauncherIcons') {
+    def source = rootProject.file('../favicon.svg')
+    def output = layout.buildDirectory.dir('generated/iconResources')
+    inputs.file source
+    outputs.dir output
+    doLast {
+        def svg = new XmlSlurper().parse(source)
+        def paths = svg.path.collect { path ->
+            "<path android:fillColor=\"${path.@fill}\" android:pathData=\"${path.@d}\"/>"
+        }
+        def drawable = new File(output.get().asFile, 'drawable')
+        drawable.mkdirs()
+        def vector = { content ->
+            """<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:scaleX="1" android:scaleY="1" android:translateX="22" android:translateY="22">
+        ${content}
+    </group>
+</vector>
+"""
+        }
+        new File(drawable, 'ic_foreground.xml').text = vector(paths.drop(1).join('\n'))
+        new File(drawable, 'ic_monochrome.xml').text = vector(paths.last())
+    }
+}
+
+android.sourceSets.main.assets.srcDir(webAssets.map { it.destinationDir })
+android.sourceSets.main.res.srcDir(layout.buildDirectory.dir('generated/iconResources'))
+tasks.named('preBuild').configure {
+    dependsOn webAssets, launcherIcons
+}
+
+dependencies {
+    implementation 'androidx.activity:activity:1.10.1'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+}

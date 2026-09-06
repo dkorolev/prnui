@@ -1,1 +1,9 @@
 tmp/
+dist/
+.gradle/
+**/build/
+local.properties
+.idea/
+*.iml
+*.jks
+*.keystore

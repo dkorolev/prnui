@@ -14,7 +14,27 @@ Open `prnui.html` directly, or serve the repository with any static file server:
 python3 -m http.server 8000
 ```
 
-Then open `http://localhost:8000/prnui.html`. The page has no build step, package install, external font, CDN, framework, or runtime fetch.
+Then open `http://localhost:8000/prnui.html`. The page has no build step, package install, external font, CDN, framework, or runtime data fetch. Its only companion asset is `favicon.svg`.
+
+## Android app
+
+The same specimen is available as an offline Android app with a launcher icon,
+system Back handling, clipboard support, and layouts that account for the keyboard
+and system bars. It packages the existing UI in Android's WebView; the controls
+retain their HTML/CSS implementation. All demo data is still synthetic.
+
+Build an installable APK with JDK 17 and Android SDK 35 installed:
+
+```sh
+./android/build-apk.sh
+```
+
+Open `dist/prnui.apk` on an Android 8.0 or newer device and tap **Install**.
+Android may first ask you to allow installation from the browser or file manager
+that opened it. No server, account, or network connection is needed to run the app.
+
+See [android/README.md](android/README.md) for SDK setup, USB installation,
+signing details, and emulator verification.
 
 ## Verify it
 
@@ -84,6 +104,8 @@ never follows the pointer and it never covers the content being inspected.
 
 ```text
 prnui.html                 component specimen and behavior
+favicon.svg                shared browser and Android icon source
+android/                   offline Android app, build, and device tests
 README.md                  component inventory and operating notes
 FEATURE-DEMO.md            human/agent verification script
 test/prnui.test.mjs        zero-dependency structural contract tests
