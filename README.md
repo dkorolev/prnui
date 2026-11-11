@@ -16,6 +16,8 @@ python3 -m http.server 8000
 
 Then open `http://localhost:8000/prnui.html`. The page has no build step, package install, external font, CDN, framework, or runtime data fetch. Its only companion asset is `favicon.svg`.
 
+The specimen is dark unless a theme is chosen. The theme control offers System, Light, and Dark, and the choice is remembered in this browser. `?theme=light` (or `system`, or `dark`) shows that theme once without replacing the remembered choice. With no choice stored, the page keeps the dark palette, including for consumers that read the stylesheet and set no theme.
+
 ## Android app
 
 The same specimen is available as an offline Android app with a launcher icon,

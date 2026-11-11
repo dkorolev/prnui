@@ -179,6 +179,28 @@ test('demo identities and machine values are unmistakably synthetic', () => {
   assert.doesNotMatch(html, /(?:sk|pk)_[a-zA-Z0-9]{20,}/);
 });
 
+test('the default palette stays dark, and light is opt-in', () => {
+  assert.doesNotMatch(html, /<html[^>]*\sdata-theme=/);
+  const root = html.slice(html.indexOf(':root {'), html.indexOf('/* Light palette'));
+  for (const token of ['--bg:        #0d1117', '--surface:   #161b22', '--text:      #e6edf3', '--cyan:      #58a6ff']) {
+    assert.ok(root.includes(token), `dark default lost ${token}`);
+  }
+  const lightStart = html.indexOf('html[data-theme="light"] {');
+  const lightEnd = html.indexOf('@media (prefers-color-scheme: light)', lightStart);
+  const light = html.slice(lightStart, lightEnd);
+  const systemStart = html.indexOf('html[data-theme="system"] {');
+  const system = html.slice(systemStart, html.indexOf('}', systemStart));
+  const declarations = block => [...block.matchAll(/--[a-z-]+:\s*[^;]+;/g)].map(match => match[0]);
+  assert.deepEqual(declarations(light), declarations(system));
+  assert.ok(light.includes('--bg: #f6f8fa'));
+  assert.ok(light.includes('color-scheme: light'));
+  for (const choice of ['system', 'light', 'dark']) {
+    assert.match(html, new RegExp(`data-theme-choice="${choice}"`));
+  }
+  assert.match(html, /prnui:theme/);
+  assert.match(html, /prnui-theme/);
+});
+
 test('the specimen vocabulary stays in repository automation and structured-stream domains', () => {
   assert.doesNotMatch(visibleText, /\b(?:trade|trader|trading|wallet|portfolio|exchange|broker|quote|bid|ask|market|position|execution|price|equity|leverage|instrument|placing|filled|buy|sell|spread|capital|balance|money)\b/i);
 });
