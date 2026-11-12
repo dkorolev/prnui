@@ -4,7 +4,7 @@ This script verifies the specimen as a future Dise migration target. All display
 
 ## Desktop visual pass
 
-1. Open `prnui.html` at approximately 1440px wide and 100% zoom.
+1. Open `prnui.html` at approximately 1440px wide and 100% zoom. Confirm the theme control offers System, Light, and Dark, and that Dark is selected when nothing has been stored.
 2. Scan every section from Foundations through AppShell. Confirm the same surface, border, typography, chamfer, spacing, and semantic-colour vocabulary is used throughout.
 3. Confirm every top-level card has one stable two-digit reference on its right edge. Retired references `18` and `19` remain unused so later references do not shift.
 4. Confirm cards and nested panels do not look like two independent card systems.
