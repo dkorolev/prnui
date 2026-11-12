@@ -49,9 +49,9 @@ This script verifies the specimen as a future Dise migration target. All display
 
 ## Hierarchical expansion
 
-1. In card 04, collapse a nested branch with `[-]`, then collapse and reopen its
+1. In card 04, collapse a nested branch with its square minus icon, then collapse and reopen its
    parent. The nested branch stays collapsed and all checked values remain intact.
-2. Tab to `[+]` and press Enter, then Space. Children appear and disappear; focus
+2. Tab to the square plus icon and press Enter, then Space. Children appear and disappear; focus
    remains on the button and hidden children are skipped by Tab.
 3. With a branch collapsed, use its checkbox and each per-kind selection diamond.
    Counts update for all descendants. Reopen to verify the hidden selections.

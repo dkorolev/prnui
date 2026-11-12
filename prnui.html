@@ -752,9 +752,10 @@
     border: 0;
     color: var(--text-muted);
     background: transparent;
-    font: 600 .85rem var(--font-mono);
     cursor: pointer;
   }
+  .tree-expand svg { display: block; width: 18px; height: 18px; margin: auto; fill: none; stroke: currentColor; stroke-width: 1.5; }
+  .tree-expand[aria-expanded="true"] .tree-expand-vertical { display: none; }
   .tree-expand:hover { color: var(--cyan); }
   .tree-expand:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
   .tree-list[hidden] { display: none; }
@@ -3404,13 +3405,12 @@
       const expand = document.createElement('button');
       expand.className = 'tree-expand';
       expand.type = 'button';
-      expand.textContent = '[-]';
+      expand.innerHTML = '<svg viewBox="0 0 18 18" aria-hidden="true" focusable="false"><rect x="2" y="2" width="14" height="14"/><path d="M5 9h8"/><path class="tree-expand-vertical" d="M9 5v8"/></svg>';
       expand.setAttribute('aria-expanded', 'true');
       expand.setAttribute('aria-controls', children.id);
       expand.setAttribute('aria-label', `Collapse ${branchName}`);
       expand.addEventListener('click', () => {
         children.hidden = !children.hidden;
-        expand.textContent = children.hidden ? '[+]' : '[-]';
         expand.setAttribute('aria-expanded', String(!children.hidden));
         expand.setAttribute('aria-label', `${children.hidden ? 'Expand' : 'Collapse'} ${branchName}`);
         // Keep focus outside the subtree that has just become hidden.

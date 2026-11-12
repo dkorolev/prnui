@@ -154,10 +154,11 @@ test('live reading and hierarchical expansion preserve independent state', { tim
   await evaluate('treeDemo.nested.focus()');
   await page('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', text: '\r', windowsVirtualKeyCode: 13 });
   await page('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
-  assert.equal(await evaluate('treeDemo.nested.textContent'), '[-]');
+  assert.equal(await evaluate('getComputedStyle(treeDemo.nested.querySelector(".tree-expand-vertical")).display'), 'none');
   await page('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', text: ' ', windowsVirtualKeyCode: 32 });
   await page('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 });
-  assert.equal(await evaluate('treeDemo.nested.textContent'), '[+]');
+  assert.notEqual(await evaluate('getComputedStyle(treeDemo.nested.querySelector(".tree-expand-vertical")).display'), 'none');
+  assert.equal(await evaluate('treeDemo.nested.textContent'), '');
   assert.equal(await evaluate('document.activeElement === treeDemo.nested'), true);
   await evaluate(`treeDemo.root.click(); treeDemo.tree.querySelector('.tree-parent').click()`);
   assert.equal(await evaluate(`[...treeDemo.tree.querySelectorAll('.tree-leaf input')].every(n => n.checked)`), true);

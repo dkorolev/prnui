@@ -84,8 +84,9 @@ Existing PRN examples remain in the same file so the visual history and newer mi
 
 ## Hierarchical expansion
 
-Every PermissionChecklist branch has a separate `[-]` / `[+]` button, initially
-expanded. Native button activation works with pointer, touch, Enter and Space.
+Every PermissionChecklist branch has a separate square minus/plus icon button,
+initially expanded. The icons use SVG strokes rather than font glyphs, with a
+36px interaction target. Native activation works with pointer, touch, Enter and Space.
 `aria-expanded` and `aria-controls` identify the visible child list; the accessible
 name includes the branch name. Collapsed descendants leave the focus order.
 Collapsing never changes permission selection, aggregate counts or nested
