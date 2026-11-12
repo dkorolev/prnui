@@ -47,8 +47,45 @@ This script verifies the specimen as a future Dise migration target. All display
 3. Confirm status meaning is always reinforced by text, not colour alone.
 4. Confirm errors and multi-reason holds are neither line-clamped nor clipped.
 
+## Hierarchical expansion
+
+1. In card 04, collapse a nested branch with its square minus icon, then collapse and reopen its
+   parent. The nested branch stays collapsed and all checked values remain intact.
+2. Tab to the square plus icon and press Enter, then Space. Children appear and disappear; focus
+   remains on the button and hidden children are skipped by Tab.
+3. With a branch collapsed, use its checkbox and each per-kind selection diamond.
+   Counts update for all descendants. Reopen to verify the hidden selections.
+4. At 390px, tap the expand button. It toggles only visibility, not its neighboring
+   checkbox. The tree remains inside its horizontal scroll region.
+
+## Live reading (card 33)
+
+1. Send one observation. The displayed revision and counts advance. Start the
+   synthetic source; its latest revision advances every two seconds.
+2. Select text across two table cells. Wait for multiple observations. Selected
+   text, displayed revision, and row positions stay unchanged; the source revision
+   keeps advancing. The held notice stays visible after clearing selection.
+3. Activate **Show latest observation**. The table jumps to the newest observation,
+   not through intermediate ones. Keyboard focus stays on the action. Subsequent
+   observations follow without another click.
+4. Focus the scrollable table with Tab and wait. It holds on the next observation.
+   Tab away: it remains held. Resume explicitly.
+5. At 390px, scroll the table horizontally; at any width, scroll it vertically.
+   Either holds on the next observation. Resume resets both scroll offsets.
+   No table or control causes horizontal page overflow at 320px.
+6. Hold reading manually, then stop the source. Reading remains held and the source
+   says stopped. Resume works even with no pending replacement. Selecting text
+   outside the table neither holds it nor loses that selection on resume.
+7. Open Reading contract and leave it open during updates. It stays open. With
+   reduced motion enabled, the source remains usable and conveys state in text.
+
 ## Automated pass
 
 ```sh
 node --test test/prnui.test.mjs
+node --test test/live-reading.browser.mjs
 ```
+
+The browser test uses an installed Chrome (macOS default, or `CHROME_BIN`), a
+temporary profile and loopback debugging only. It closes its browser and removes
+the profile after the run; no server or package installation is required.

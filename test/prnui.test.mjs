@@ -88,7 +88,7 @@ test('the permission tree scrolls within its own bounded region when narrow', ()
 test('top-level specimen cards receive stable two-digit side references', () => {
   const refs = [...html.matchAll(/data-section-ref="(\d{2})"/g)].map(match => match[1]);
   const expected = [...Array.from({ length: 17 }, (_, index) => String(index + 1).padStart(2, '0')),
-    ...Array.from({ length: 12 }, (_, index) => String(index + 20).padStart(2, '0'))];
+    ...Array.from({ length: 12 }, (_, index) => String(index + 20).padStart(2, '0')), '33'];
   assert.deepEqual(refs, expected);
   assert.doesNotMatch(html, /data-section-ref="(?:18|19)"/);
   assert.match(html, /content:\s*attr\(data-section-ref\)/);

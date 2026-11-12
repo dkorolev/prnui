@@ -745,6 +745,20 @@
     flex: 0 1 auto;
   }
   .tree-branch-row > .tree-count { margin-left: auto; }
+  .tree-expand {
+    flex: 0 0 36px;
+    min-height: 36px;
+    padding: 0;
+    border: 0;
+    color: var(--text-muted);
+    background: transparent;
+    cursor: pointer;
+  }
+  .tree-expand svg { display: block; width: 18px; height: 18px; margin: auto; fill: none; stroke: currentColor; stroke-width: 1.5; }
+  .tree-expand[aria-expanded="true"] .tree-expand-vertical { display: none; }
+  .tree-expand:hover { color: var(--cyan); }
+  .tree-expand:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+  .tree-list[hidden] { display: none; }
   .tree-branch-tools {
     display: inline-flex;
     align-items: center;
@@ -1983,6 +1997,16 @@
   .copy-popover-copy { flex: 0 0 auto; }
 
   .data-table-viewport { overflow: auto; border: 1px solid var(--border); }
+  .live-reading-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+  .live-reading-status { min-height: 3em; font-size: .8rem; }
+  .live-reading-status[data-held="true"] { color: var(--yellow); }
+  .live-reading-viewport { height: 16rem; overflow-anchor: none; scrollbar-gutter: stable; }
+  .live-reading-viewport:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .live-reading-table { min-width: 560px; }
+  .live-reading-table th.numeric { text-align: right; }
+  .live-reading-contract { margin-top: 12px; font-size: .8rem; }
+  .live-reading-contract summary { cursor: pointer; padding-block: 8px; }
+  .live-reading-contract summary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
   .data-table { width: 100%; min-width: 720px; border-collapse: collapse; font-size: .76rem; }
   .data-table--dense td { padding-block: 7px; }
   .data-table th { position: sticky; top: 0; z-index: 1; padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--text-muted); background: var(--surface-deep); font-size: .64rem; letter-spacing: .06em; text-align: left; text-transform: uppercase; white-space: nowrap; }
@@ -3106,6 +3130,29 @@
     </div>
   </div>
 
+  <section class="chamfer card card--accent-left accent-cyan" id="component-live-reading" data-component="LiveReading DataTable" data-section-ref="33">
+    <p class="section-label">Live reading · synthetic observations</p>
+    <p class="demo-note">Incoming information respects your attention. Select text, focus the table, or scroll inside it to hold the displayed observation when the next update arrives. Only the newest replacement waits; other surfaces keep updating.</p>
+    <div class="live-reading-controls">
+      <button class="chamfer btn btn--cyan btn--small" type="button" id="readingSource" aria-pressed="false"><span>Start synthetic source</span></button>
+      <button class="chamfer btn btn--muted btn--small" type="button" id="readingNext"><span>Send one observation</span></button>
+      <button class="chamfer btn btn--muted btn--small" type="button" id="readingHold" aria-pressed="false"><span>Hold reading</span></button>
+      <button class="chamfer btn btn--cyan btn--small" type="button" id="readingResume" aria-disabled="true"><span>Show latest observation</span></button>
+    </div>
+    <p class="demo-note" id="readingSourceStatus">Synthetic source stopped · latest observation 1</p>
+    <p class="live-reading-status" id="readingStatus" role="status" data-held="false">Following observations.</p>
+    <p class="demo-note">Displayed observation <span id="readingRevision">1</span> · synthetic values</p>
+    <div class="data-table-viewport live-reading-viewport" id="readingViewport" tabindex="0" role="region" aria-label="Synthetic worker observations, scrollable" aria-describedby="readingStatus">
+      <table class="data-table data-table--dense live-reading-table">
+        <caption class="sr-only">Synthetic worker observations, not live service data</caption>
+        <thead><tr><th scope="col">Worker</th><th scope="col" class="numeric">Completed</th><th scope="col">State</th></tr></thead>
+        <tbody id="readingBody"></tbody>
+      </table>
+    </div>
+    <noscript><p class="demo-note">Enable JavaScript to run this local synthetic source.</p></noscript>
+    <details class="live-reading-contract"><summary>Reading contract</summary><p>A hold affects this table only, not the source. Leaving the table does not silently resume it. Show latest observation clears selection only inside this table, returns its scroll to the origin, and keeps keyboard focus on that action. Moving focus or selecting outside this table does not hold it. Source updates never reorder or replace existing row nodes.</p></details>
+  </section>
+
   <div class="overlay" id="tokenDialog" aria-hidden="true">
     <div class="chamfer dialog dialog--medium" role="dialog" aria-modal="true" aria-labelledby="tokenDialogTitle" aria-describedby="tokenDialogDescription" tabindex="-1">
       <div class="dialog-header"><div><p class="section-label">Capability</p><h2 class="dialog-title" id="tokenDialogTitle">Generate synthetic token</h2></div><button class="chamfer btn btn--ghost btn--icon" type="button" data-dialog-close aria-label="Close token dialog"><span>×</span></button></div>
@@ -3141,6 +3188,84 @@
   <div class="chamfer ui-tip" id="uiTip" role="tooltip" aria-hidden="true"><div class="ui-tip-lines"></div></div>
 
 <script>
+  // Live reading: one displayed observation and at most one newest replacement.
+  // No transport, persistence, or authority belongs to this presentation policy.
+  (() => {
+    const viewport = document.getElementById('readingViewport');
+    const body = document.getElementById('readingBody');
+    const status = document.getElementById('readingStatus');
+    const sourceStatus = document.getElementById('readingSourceStatus');
+    const source = document.getElementById('readingSource');
+    const hold = document.getElementById('readingHold');
+    const resume = document.getElementById('readingResume');
+    let latest = 1, displayed = 1, held = false, pending = null, timer = null;
+    const cells = Array.from({ length: 12 }, (_, index) => {
+      const row = body.insertRow();
+      row.insertCell().textContent = `synthetic-worker-${String(index + 1).padStart(2, '0')}`;
+      const count = row.insertCell(); count.className = 'numeric';
+      row.insertCell().textContent = 'Ready';
+      return count;
+    });
+    function setText(node, value) {
+      if (node.textContent !== value) node.textContent = value;
+    }
+    function selectionInside() {
+      const selection = getSelection();
+      if (!selection || selection.isCollapsed) return false;
+      for (let index = 0; index < selection.rangeCount; index++) {
+        if (selection.getRangeAt(index).intersectsNode(viewport)) return true;
+      }
+      return false;
+    }
+    function paint(revision) {
+      displayed = revision;
+      cells.forEach((cell, index) => setText(cell, String(revision * 100 + index)));
+      setText(document.getElementById('readingRevision'), String(revision));
+    }
+    function controls() {
+      status.dataset.held = String(held);
+      setText(status, held
+        ? (pending === null ? 'Reading held · waiting for a new observation.' : `Reading held · showing observation ${displayed}. A newer observation is waiting.`)
+        : 'Following observations.');
+      hold.setAttribute('aria-pressed', String(held));
+      // aria-disabled preserves keyboard focus after explicit resume.
+      resume.setAttribute('aria-disabled', String(!held));
+      resume.classList.toggle('btn--disabled', !held);
+      setText(sourceStatus, `Synthetic source ${timer === null ? 'stopped' : 'running'} · latest observation ${latest}`);
+    }
+    function receive() {
+      latest++;
+      if (held || selectionInside() || viewport.contains(document.activeElement) || viewport.scrollTop > 0 || viewport.scrollLeft > 0) {
+        held = true;
+        pending = latest;
+      } else paint(latest);
+      controls();
+    }
+    document.getElementById('readingNext').addEventListener('click', receive);
+    hold.addEventListener('click', () => { held = true; controls(); });
+    resume.addEventListener('click', () => {
+      if (!held) return;
+      if (selectionInside()) getSelection().removeAllRanges();
+      viewport.scrollTop = 0; viewport.scrollLeft = 0;
+      if (pending !== null) paint(pending);
+      held = false; pending = null; controls();
+    });
+    source.addEventListener('click', () => {
+      if (timer === null) timer = setInterval(receive, 2000);
+      else { clearInterval(timer); timer = null; }
+      source.setAttribute('aria-pressed', String(timer !== null));
+      setText(source.querySelector('span'), timer === null ? 'Start synthetic source' : 'Stop synthetic source');
+      controls();
+    });
+    addEventListener('pagehide', () => {
+      clearInterval(timer); timer = null;
+      source.setAttribute('aria-pressed', 'false');
+      setText(source.querySelector('span'), 'Start synthetic source');
+      controls();
+    });
+    paint(1); controls();
+  })();
+
   // programmatic smooth scrolling honors the user's reduced-motion setting
   const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const scrollBehavior = () => (prefersReducedMotion.matches ? 'auto' : 'smooth');
@@ -3262,10 +3387,10 @@
   });
 
   // hierarchical checkboxes
-  document.querySelectorAll('[data-checktree]').forEach(tree => {
+  document.querySelectorAll('[data-checktree]').forEach((tree, treeIndex) => {
     const parents = [...tree.querySelectorAll('.tree-parent')];
 
-    parents.forEach(parent => {
+    parents.forEach((parent, branchIndex) => {
       const branch = parent.closest('.tree-branch');
       const label = parent.closest('.tree-label');
       const branchName = label.querySelector('.tree-name').textContent;
@@ -3275,6 +3400,22 @@
       row.className = 'tree-branch-row';
       tools.className = 'tree-branch-tools';
       tools.setAttribute('aria-label', `${branchName} type selection`);
+      const children = branch.querySelector(':scope > .tree-list');
+      children.id = `tree-${treeIndex}-branch-${branchIndex}`;
+      const expand = document.createElement('button');
+      expand.className = 'tree-expand';
+      expand.type = 'button';
+      expand.innerHTML = '<svg viewBox="0 0 18 18" aria-hidden="true" focusable="false"><rect x="2" y="2" width="14" height="14"/><path d="M5 9h8"/><path class="tree-expand-vertical" d="M9 5v8"/></svg>';
+      expand.setAttribute('aria-expanded', 'true');
+      expand.setAttribute('aria-controls', children.id);
+      expand.setAttribute('aria-label', `Collapse ${branchName}`);
+      expand.addEventListener('click', () => {
+        children.hidden = !children.hidden;
+        expand.setAttribute('aria-expanded', String(!children.hidden));
+        expand.setAttribute('aria-label', `${children.hidden ? 'Expand' : 'Collapse'} ${branchName}`);
+        // Keep focus outside the subtree that has just become hidden.
+        expand.focus({ preventScroll: true });
+      });
       ['readonly', 'mutable'].forEach(kind => {
         const button = document.createElement('button');
         const readableKind = kind === 'readonly' ? 'read-only' : 'mutable';
@@ -3288,7 +3429,7 @@
         tools.appendChild(button);
       });
       branch.insertBefore(row, label);
-      row.append(label, tools, branchCount);
+      row.append(expand, label, tools, branchCount);
     });
 
     function updateTreeState() {
