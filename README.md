@@ -44,9 +44,14 @@ The zero-dependency test suite uses Node's built-in test runner:
 
 ```sh
 node --test test/prnui.test.mjs
+node --test test/live-reading.browser.mjs
 ```
 
 For visual and keyboard verification, follow [FEATURE-DEMO.md](FEATURE-DEMO.md). The checklist covers desktop, sub-520px, dense-table, reduced-motion, pointer, and keyboard-only paths.
+
+The browser test requires Node with built-in WebSocket support and an installed
+Chrome (macOS default or `CHROME_BIN`). It uses and removes a temporary browser
+profile; no packages or application server are needed.
 
 ## Component inventory
 
@@ -76,6 +81,40 @@ The specimen covers the 20 requested families and compositions:
 Added after the initial twenty: a docked Inspector, governed by the overlay rule below.
 
 Existing PRN examples remain in the same file so the visual history and newer migration-ready contracts can be compared in one place.
+
+## Hierarchical expansion
+
+Every PermissionChecklist branch has a separate `[-]` / `[+]` button, initially
+expanded. Native button activation works with pointer, touch, Enter and Space.
+`aria-expanded` and `aria-controls` identify the visible child list; the accessible
+name includes the branch name. Collapsed descendants leave the focus order.
+Collapsing never changes permission selection, aggregate counts or nested
+expansion choices. Parent checkboxes and per-kind bulk actions still operate on
+all descendants, including hidden ones. Without JavaScript all leaves stay visible.
+
+## Live reading
+
+Card `33` composes a synthetic source, a semantic table, and reading controls.
+Start the source for an observation every two seconds, or send observations
+manually. It makes no network requests and starts stopped.
+
+- A changing surface preserves selected text, keyboard focus, and internal scroll
+  position. On an incoming change, selection intersecting the table, focus within
+  its viewport, or scrolling away from either origin holds its displayed observation.
+- A manual hold is available. A held surface retains only the newest replacement,
+  not an unbounded queue. Leaving the surface never silently resumes it.
+- **Show latest observation** applies that replacement, clears only selection
+  intersecting this surface, resets its internal scroll, and preserves action focus.
+- Source state and reading state are independent: a stopped source is not an
+  error, and a held table does not stop incoming observations or other surfaces.
+- Announce changes of reading state without announcing every incoming sample.
+  Use stable row identities and change only text whose value changed.
+
+This is a presentation contract, not a transport or data-model API. Consumers
+must label the observation being displayed; current source activity cannot make
+a held observation current. Keep actions requiring current evidence separately
+qualified. Test selection across cell boundaries, horizontal scrolling, keyboard
+focus, and explicit resume together, not just individual controls in isolation.
 
 ## Overlay rule
 
