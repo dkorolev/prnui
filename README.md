@@ -106,6 +106,39 @@ Collapsing never changes permission selection, aggregate counts or nested
 expansion choices. Parent checkboxes and per-kind bulk actions still operate on
 all descendants, including hidden ones. Without JavaScript all leaves stay visible.
 
+## Live timestamps
+
+Pair a fixed event time with a relative age, for example
+`2026-11-19 14:03:09 UTC (8s ago)`. Put the absolute time in a `<time>`
+element with an ISO 8601 `datetime` value. If the interface also shows when
+it last refreshed, label that time separately.
+
+Let the smallest displayed unit set the update cadence. A fresh event visibly
+ticks once a second. As it ages, both the precision and the timer change.
+
+| Elapsed time | Example | Next visible update |
+| --- | --- | --- |
+| Under 3 minutes | `(8s ago)` | Next whole second |
+| 3 minutes to under 1 hour | `(3m ago)` | Next whole minute |
+| 1 hour to under 1 day | `(1h 3m ago)` | Next whole minute |
+| 1 day to under 60 days | `(1d 2h ago)` | Next whole hour |
+| 60 days or more | `(60d ago)` | Next whole day |
+
+Round elapsed time down. Schedule the next update at the next boundary measured
+from the event time. For example, `(179s ago)` becomes `(3m ago)` one second
+later, then stays still for a full minute. When the page becomes visible again,
+recalculate the age from the timestamp and the current clock.
+
+Give the age its own persistent inline component beside the absolute time.
+Keep its text in a dedicated text node and update only that node when the label
+changes. Reserve enough width for the longest label and use tabular digits.
+Keep the age readable on demand by assistive technology without announcing
+every tick.
+
+To check the interaction, select the absolute time and surrounding prose, then
+let the age cross a unit boundary while extending the selection. The selection
+endpoints, keyboard focus, and positions of neighboring text should stay put.
+
 ## Live reading
 
 Live controls must stay where the reader placed their pointer or keyboard focus.
