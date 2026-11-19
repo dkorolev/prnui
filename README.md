@@ -108,7 +108,8 @@ ticks once a second. As it ages, both the precision and the timer change.
 | Under 3 minutes | `(8s ago)` | Next whole second |
 | 3 minutes to under 1 hour | `(3m ago)` | Next whole minute |
 | 1 hour to under 1 day | `(1h 3m ago)` | Next whole minute |
-| 1 day or more | `(1d 2h ago)` | Next whole hour |
+| 1 day to under 60 days | `(1d 2h ago)` | Next whole hour |
+| 60 days or more | `(60d ago)` | Next whole day |
 
 Round elapsed time down. Schedule the next update at the next boundary measured
 from the event time. For example, `(179s ago)` becomes `(3m ago)` one second
