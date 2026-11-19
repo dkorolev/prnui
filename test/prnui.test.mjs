@@ -204,3 +204,15 @@ test('the default palette stays dark, and light is opt-in', () => {
 test('the specimen vocabulary stays in repository automation and structured-stream domains', () => {
   assert.doesNotMatch(visibleText, /\b(?:trade|trader|trading|wallet|portfolio|exchange|broker|quote|bid|ask|market|position|execution|price|equity|leverage|instrument|placing|filled|buy|sell|spread|capital|balance|money)\b/i);
 });
+
+test('visible multiline editors use the field theme and bounded scrolling', () => {
+  const editors = [...html.matchAll(/<textarea\b[^>]*>/gi)];
+  assert.ok(editors.length);
+  for (const [editor] of editors) {
+    assert.match(editor, /class="[^"]*\bfield-input\b/);
+  }
+  const rule = html.match(/textarea\.field-input\s*\{([^}]+)\}/)[1];
+  assert.match(rule, /resize:\s*none/);
+  assert.match(rule, /max-height:/);
+  assert.match(rule, /overflow-y:\s*auto/);
+});

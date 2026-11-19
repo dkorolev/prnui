@@ -1846,6 +1846,14 @@
     background: transparent;
     font: inherit;
   }
+  textarea.field-input {
+    resize: none;
+    field-sizing: content;
+    min-height: 4.75rem;
+    max-height: 14rem;
+    overflow-y: auto;
+    line-height: 1.5;
+  }
   .field-input::placeholder { color: var(--text-muted); }
   .field-input:disabled { color: var(--text-muted); cursor: not-allowed; }
   .field-input[readonly] { color: var(--text-code); font-family: var(--font-mono); }
@@ -2944,6 +2952,12 @@
   <section class="chamfer card card--accent-left accent-green" id="component-field" data-component="Field TextInput PasswordInput Select Listbox" data-section-ref="17">
     <p class="section-label">Fields, inputs &amp; select</p>
     <div class="field-grid">
+      <div class="field">
+        <label class="field-label" for="demoHandoff">Handoff note</label>
+        <div class="chamfer field-control">
+          <textarea class="field-input" id="demoHandoff" rows="3" placeholder="Add a note for the next operator"></textarea>
+        </div>
+      </div>
       <div class="field"><div class="field-label-row"><label class="field-label" for="demoAlias">Role alias</label><span class="field-optional">optional</span></div><div class="chamfer field-control"><input class="field-input" id="demoAlias" placeholder="Example: observer-east"></div><p class="field-hint" id="demoAliasHint">Visible to operators; does not change the machine identifier.</p></div>
       <div class="field"><div class="field-label-row"><label class="field-label" for="demoPassword">Current password</label></div><div class="chamfer field-control"><input class="field-input" id="demoPassword" type="password" value="synthetic-password" autocomplete="current-password" aria-describedby="demoPasswordHint"><button class="field-action password-toggle" type="button" aria-label="Show password" aria-controls="demoPassword">◉</button></div><p class="field-hint" id="demoPasswordHint">Required to unlock this synthetic console.</p></div>
       <div class="field field--invalid"><div class="field-label-row"><label class="field-label" for="demoInvalid">Token label</label></div><div class="chamfer field-control"><input class="field-input" id="demoInvalid" value="x" aria-invalid="true" aria-describedby="demoInvalidError"></div><p class="field-message" id="demoInvalidError">Use at least three characters.<br>The label must not match a reserved capability name.</p></div>
