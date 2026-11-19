@@ -93,13 +93,37 @@ Collapsing never changes permission selection, aggregate counts or nested
 expansion choices. Parent checkboxes and per-kind bulk actions still operate on
 all descendants, including hidden ones. Without JavaScript all leaves stay visible.
 
-## Event timestamps and comment provenance
+## Live timestamps
 
-- Link directly to a comment that needs a response. Identify its author and use the creation time from the source. Label the alert's observation time separately.
-- Name the destination of each link. A pull request link identifies the PR. A failed check links to the specific job when available. Label a fallback link to the checks overview accordingly.
-- Give each important event an absolute date, clock time and time zone. Use colons in the clock, for example `2026-11-19 14:03:09 UTC`. Keep the machine-readable ISO 8601 value in the HTML time element.
-- Follow the timestamp with a parenthesized relative age. Use whole seconds through 179 seconds, whole minutes from three minutes, hours and minutes from one hour, then days and hours from one day. Examples include `(8s ago)`, `(3m ago)`, `(1h 3m ago)` and `(1d 2h ago)`.
-- Reserve room for the age with tabular digits. Update just the text when the displayed value changes. Keep focus, selection and control positions stable, and let screen readers read the timestamp on demand without announcing each tick.
+Pair a fixed event time with a relative age, for example
+`2026-11-19 14:03:09 UTC (8s ago)`. Put the absolute time in a `<time>`
+element with an ISO 8601 `datetime` value. If the interface also shows when
+it last refreshed, label that time separately.
+
+Let the smallest displayed unit set the update cadence. A fresh event visibly
+ticks once a second. As it ages, both the precision and the timer change.
+
+| Elapsed time | Example | Next visible update |
+| --- | --- | --- |
+| Under 3 minutes | `(8s ago)` | Next whole second |
+| 3 minutes to under 1 hour | `(3m ago)` | Next whole minute |
+| 1 hour to under 1 day | `(1h 3m ago)` | Next whole minute |
+| 1 day or more | `(1d 2h ago)` | Next whole hour |
+
+Round elapsed time down. Schedule the next update at the next boundary measured
+from the event time. For example, `(179s ago)` becomes `(3m ago)` one second
+later, then stays still for a full minute. When the page becomes visible again,
+recalculate the age from the timestamp and the current clock.
+
+Give the age its own persistent inline component beside the absolute time.
+Keep its text in a dedicated text node and update only that node when the label
+changes. Reserve enough width for the longest label and use tabular digits.
+Keep the age readable on demand by assistive technology without announcing
+every tick.
+
+To check the interaction, select the absolute time and surrounding prose, then
+let the age cross a unit boundary while extending the selection. The selection
+endpoints, keyboard focus, and positions of neighboring text should stay put.
 
 ## Live reading
 
