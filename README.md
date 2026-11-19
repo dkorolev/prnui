@@ -95,6 +95,25 @@ all descendants, including hidden ones. Without JavaScript all leaves stay visib
 
 ## Live reading
 
+Live controls must stay where the reader placed their pointer or keyboard focus.
+Preserve row identity, order, scroll position, selection and unsent edits across
+polls. Append new items below existing ones. Keep a resolved item in place
+while its editor is open. Apply removals or reordering when the reader
+explicitly refreshes, filters or leaves that view.
+
+Reserve space for pending, saved and error feedback. Hover, focus, press and
+background updates must preserve control geometry. To check a live form, place
+the pointer over its submit button, edit a reply, and simulate an arrival and a
+removal above it during a delayed save. The same control should remain under
+the pointer, the caret should stay in the draft, and a second click should
+never activate a different action.
+
+When alerts have their own queue, give them a peer view with a stable count
+in the navigation. Opening the queue switches the content below the navigation.
+Receiving an alert leaves the current view, draft and focus in place. A link
+from a blocked item opens its specific alert. Returning to the previous view
+preserves its filters. Check both keyboard and pointer navigation.
+
 Card `33` composes a synthetic source, a semantic table, and reading controls.
 Start the source for an observation every two seconds, or send observations
 manually. It makes no network requests and starts stopped.
