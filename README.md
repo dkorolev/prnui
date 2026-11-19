@@ -82,6 +82,19 @@ Added after the initial twenty: a docked Inspector, governed by the overlay rule
 
 Existing PRN examples remain in the same file so the visual history and newer migration-ready contracts can be compared in one place.
 
+## Multiline fields
+
+Use a labeled native textarea inside the same field shell as a single-line input.
+Apply the theme's text, surface, border, focus, and font styles in every color
+scheme. Keep the width within the form column and disable the browser's manual
+resize grip on user-facing editors. Let longer text grow vertically to a bounded
+height, then scroll inside the field. Browsers without content-based sizing
+should provide a scrollable multiline field. Preserve selection, keyboard
+navigation, and line breaks. If the editor offers a suggested reply, provide
+an explicit insert action so the user can edit before submitting. Keep a
+keyboard path out of the field after accepting a suggestion. Enter inserts a
+newline. Document any submit shortcut beside the editor.
+
 ## Hierarchical expansion
 
 Every PermissionChecklist branch has a separate square minus/plus icon button,
