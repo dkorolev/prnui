@@ -93,6 +93,14 @@ Collapsing never changes permission selection, aggregate counts or nested
 expansion choices. Parent checkboxes and per-kind bulk actions still operate on
 all descendants, including hidden ones. Without JavaScript all leaves stay visible.
 
+## Event timestamps and comment provenance
+
+- Link directly to a comment that needs a response. Identify its author and use the creation time from the source. Label the alert's observation time separately.
+- Name the destination of each link. A pull request link identifies the PR. A failed check links to the specific job when available. Label a fallback link to the checks overview accordingly.
+- Give each important event an absolute date, clock time and time zone. Use colons in the clock, for example `2026-11-19 14:03:09 UTC`. Keep the machine-readable ISO 8601 value in the HTML time element.
+- Follow the timestamp with a parenthesized relative age. Use whole seconds through 179 seconds, whole minutes from three minutes, hours and minutes from one hour, then days and hours from one day. Examples include `(8s ago)`, `(3m ago)`, `(1h 3m ago)` and `(1d 2h ago)`.
+- Reserve room for the age with tabular digits. Update just the text when the displayed value changes. Keep focus, selection and control positions stable, and let screen readers read the timestamp on demand without announcing each tick.
+
 ## Live reading
 
 Card `33` composes a synthetic source, a semantic table, and reading controls.
